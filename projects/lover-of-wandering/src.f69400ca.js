@@ -63870,7 +63870,7 @@ function () {
           affect: _this.dispatchEffect.bind(_this),
           state: state || _this.state
         });
-        return state;
+        return _this.run();
       });
     }
 
@@ -65883,7 +65883,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55498" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58851" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
