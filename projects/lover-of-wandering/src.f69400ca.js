@@ -43959,11 +43959,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.createModelContext = exports.useModel = void 0;
 
-var _react = _interopRequireWildcard(require("react"));
-
-function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+var _react = require("react");
 
 var useModel = function useModel(model) {
   var _a = (0, _react.useState)(model.getState()),
@@ -43973,11 +43969,12 @@ var useModel = function useModel(model) {
   var bundle = (0, _react.useState)({
     dispatch: model.dispatchAction.bind(model),
     affect: model.dispatchEffect.bind(model),
-    run: model.run.bind(model)
+    run: model.run.bind(model),
+    subscribeToEffect: model.subscribeToEffect.bind(model),
+    subscribeToAction: model.subscribeToAction.bind(model)
   })[0];
   (0, _react.useEffect)(function () {
     model.subscribe(function (nextState) {
-      if (!bundle) return;
       setState(nextState);
     });
   }, []);
@@ -43987,23 +43984,14 @@ var useModel = function useModel(model) {
 exports.useModel = useModel;
 
 var createModelContext = function createModelContext(model) {
-  var _a = useModel(model),
-      state = _a[0],
-      bundle = _a[1];
-
-  var Context = (0, _react.createContext)([state, bundle]);
-
-  var Provider = function Provider(_a) {
-    var children = _a.children;
-    return _react.default.createElement(Context.Provider, {
-      value: [state, bundle]
-    }, children);
-  };
-
-  return {
-    Context: Context,
-    Provider: Provider
-  };
+  var Context = (0, _react.createContext)([model.getState(), {
+    dispatch: model.dispatchAction.bind(model),
+    affect: model.dispatchEffect.bind(model),
+    run: model.run.bind(model),
+    subscribeToEffect: model.subscribeToEffect.bind(model),
+    subscribeToAction: model.subscribeToAction.bind(model)
+  }]);
+  return Context;
 };
 
 exports.createModelContext = createModelContext;
@@ -63789,6 +63777,8 @@ function () {
     this.effects = options.effects;
     this.queue = new _queue.default();
     this.subscriptions = [];
+    this.effectSubscriptions = new Map();
+    this.actionSubscriptions = new Map();
   }
 
   Model.prototype.run = function () {
@@ -63824,17 +63814,28 @@ function () {
     return this.state;
   };
 
-  Model.prototype.setState = function (state) {
-    this.state = state;
+  Model.prototype.subscribe = function (subscriptionCb) {
+    this.subscriptions.push(subscriptionCb);
+  };
 
-    for (var _i = 0, _a = this.subscriptions; _i < _a.length; _i++) {
-      var subscription = _a[_i];
-      subscription(state);
+  Model.prototype.subscribeToAction = function (name, subscriptionCb) {
+    var subscriptions = this.actionSubscriptions.get(name);
+
+    if (subscriptions) {
+      subscriptions.push(subscriptionCb);
+    } else {
+      this.actionSubscriptions.set(name, [subscriptionCb]);
     }
   };
 
-  Model.prototype.subscribe = function (subscriptionCb) {
-    this.subscriptions.push(subscriptionCb);
+  Model.prototype.subscribeToEffect = function (name, subscriptionCb) {
+    var subscriptions = this.effectSubscriptions.get(name);
+
+    if (subscriptions) {
+      subscriptions.push(subscriptionCb);
+    } else {
+      this.effectSubscriptions.set(name, [subscriptionCb]);
+    }
   };
 
   Model.prototype.dispatchAction = function (name, data) {
@@ -63846,6 +63847,8 @@ function () {
       this.log("🚧 Queuing Action", name, data);
       return this.queue.enqueue(function (state) {
         _this.log("✅ Calling Action", name, data);
+
+        _this.notifyActionSubscribers(name, data, state || _this.state);
 
         return action(state || _this.state, data);
       });
@@ -63864,6 +63867,8 @@ function () {
       return this.queue.enqueue(function (state) {
         _this.log("🏃‍♂️ Running Effect", name, data);
 
+        _this.notifyEffectSubscribers(name, data, state || _this.state);
+
         effect({
           data: data,
           dispatch: _this.dispatchAction.bind(_this),
@@ -63875,6 +63880,37 @@ function () {
     }
 
     return Promise.resolve(this.state);
+  };
+
+  Model.prototype.notifyActionSubscribers = function (name, data, state) {
+    var subscriptions = this.actionSubscriptions.get(name);
+
+    if (subscriptions) {
+      for (var _i = 0, subscriptions_1 = subscriptions; _i < subscriptions_1.length; _i++) {
+        var subscription = subscriptions_1[_i];
+        subscription(data, state);
+      }
+    }
+  };
+
+  Model.prototype.notifyEffectSubscribers = function (name, data, state) {
+    var subscriptions = this.effectSubscriptions.get(name);
+
+    if (subscriptions) {
+      for (var _i = 0, subscriptions_2 = subscriptions; _i < subscriptions_2.length; _i++) {
+        var subscription = subscriptions_2[_i];
+        subscription(data, state);
+      }
+    }
+  };
+
+  Model.prototype.setState = function (state) {
+    this.state = state;
+
+    for (var _i = 0, _a = this.subscriptions; _i < _a.length; _i++) {
+      var subscription = _a[_i];
+      subscription(state);
+    }
   };
 
   Model.prototype.log = function () {
@@ -63892,17 +63928,35 @@ function () {
 
 var _default = Model;
 exports.default = _default;
-},{"./queue":"logic/queue.ts"}],"game/hooks.ts":[function(require,module,exports) {
+},{"./queue":"logic/queue.ts"}],"utils/ids.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.cogito = exports.insight = exports.doubt = exports.blankSlate = void 0;
+exports.nextID = void 0;
+var i = 0;
+
+var nextID = function nextID() {
+  return i++;
+};
+
+exports.nextID = nextID;
+},{}],"game/baseHooks.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.blankSlate = void 0;
+
+var _ids = require("~/utils/ids");
 
 var blankSlate = function blankSlate(target) {
   return {
+    id: (0, _ids.nextID)(),
     p: 1,
+    turns: [],
     when: "start-of-turn",
     effects: [{
       name: "CLEAR_CERTAINTY",
@@ -63911,78 +63965,16 @@ var blankSlate = function blankSlate(target) {
       }
     }]
   };
-}; // descartes
-
+};
 
 exports.blankSlate = blankSlate;
-
-var doubt = function doubt() {
-  return {
-    p: 0.95,
-    when: "start-of-turn",
-    effects: [{
-      name: "DEAL_DAMAGE",
-      data: {
-        target: "player",
-        damage: 10
-      }
-    }]
-  };
-};
-
-exports.doubt = doubt;
-
-var insight = function insight() {
-  return {
-    p: 0.25,
-    when: "start-of-turn",
-    effects: [{
-      name: "GAIN_CERTAINTY",
-      data: {
-        target: "enemy",
-        certainty: 12
-      }
-    }]
-  };
-};
-
-exports.insight = insight;
-
-var cogito = function cogito() {
-  return {
-    p: 1,
-    turn: 3,
-    when: "start-of-turn",
-    effects: [{
-      name: "DEAL_DAMAGE",
-      data: {
-        target: "player",
-        damage: 50
-      }
-    }]
-  };
-};
-
-exports.cogito = cogito;
-},{}],"game/fight.ts":[function(require,module,exports) {
+},{"~/utils/ids":"utils/ids.ts"}],"fight/hooks.model.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.initFight = void 0;
-
-var _lodash = require("lodash");
-
-var _model = _interopRequireDefault(require("~/logic/model"));
-
-var fightHooks = _interopRequireWildcard(require("~/game/hooks"));
-
-function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+exports.effects = exports.actions = void 0;
 
 var __assign = void 0 && (void 0).__assign || function () {
   __assign = Object.assign || function (t) {
@@ -64157,571 +64149,1917 @@ var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
   return r;
 };
 
-var createNewPlayer = function createNewPlayer(deck) {
-  return {
-    deck: deck,
-    energy: 3,
-    baseAttributes: {
-      hp: 100,
-      certainty: 100
-    }
-  };
-};
+var actions = {
+  ADD_HOOK: function ADD_HOOK(state, _a) {
+    var _b;
 
-var createDescartes = function createDescartes() {
-  return {
-    name: "Descartes",
-    baseAttributes: {
-      hp: 100,
-      certainty: 100
-    },
-    hooks: [fightHooks.doubt(), fightHooks.insight(), fightHooks.cogito()]
-  };
-};
+    var target = _a.target,
+        hook = _a.hook;
+    return __assign(__assign({}, state), (_b = {}, _b[target] = __assign(__assign({}, state[target]), {
+      hooks: __spreadArrays(state[target].hooks, [hook])
+    }), _b));
+  },
+  REMOVE_HOOK: function REMOVE_HOOK(state, _a) {
+    var _b;
 
-var initFight = function initFight(deck) {
-  console.log("Init!");
-  var player = createNewPlayer(deck);
-  var enemy = createDescartes();
-  return new _model.default({
-    state: {
-      turn: 0,
-      player: {
-        player: player,
-        energy: 3,
-        attributes: {
-          hp: 100,
-          certainty: 0
-        },
-        hooks: [fightHooks.blankSlate("player")],
-        cards: {
-          hand: [],
-          draw: (0, _lodash.shuffle)(player.deck),
-          discard: []
+    var target = _a.target,
+        hookId = _a.hookId;
+    return __assign(__assign({}, state), (_b = {}, _b[target] = __assign(__assign({}, state[target]), {
+      hooks: state[target].hooks.filter(function (hook) {
+        return hook.id !== hookId;
+      })
+    }), _b));
+  }
+};
+exports.actions = actions;
+var effects = {
+  RUN_HOOKS: function RUN_HOOKS(_a) {
+    var hooks = _a.data.hooks,
+        affect = _a.affect,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var _i, hooks_1, hook, isScripted, isSuccess, shouldRun, _b, _c, effect;
+
+      return __generator(this, function (_d) {
+        switch (_d.label) {
+          case 0:
+            _i = 0, hooks_1 = hooks;
+            _d.label = 1;
+
+          case 1:
+            if (!(_i < hooks_1.length)) return [3
+            /*break*/
+            , 6];
+            hook = hooks_1[_i];
+            isScripted = false;
+
+            switch (hook.turns[0]) {
+              case "before":
+                isScripted = state.turn < hook.turns[1];
+                break;
+
+              case "after":
+                isScripted = state.turn > hook.turns[1];
+                break;
+
+              default:
+                isScripted = !!hook.turns.find(function (turn) {
+                  return turn === state.turn;
+                });
+            }
+
+            if (hook.turns.length > 0 && !isScripted) {
+              return [3
+              /*break*/
+              , 5];
+            }
+
+            isSuccess = hook.p >= Math.random();
+            shouldRun = isScripted ? isScripted && isSuccess : isSuccess;
+            if (!shouldRun) return [3
+            /*break*/
+            , 5];
+            _b = 0, _c = hook.effects;
+            _d.label = 2;
+
+          case 2:
+            if (!(_b < _c.length)) return [3
+            /*break*/
+            , 5];
+            effect = _c[_b];
+            return [4
+            /*yield*/
+            , affect(effect.name, effect.data)];
+
+          case 3:
+            _d.sent();
+
+            _d.label = 4;
+
+          case 4:
+            _b++;
+            return [3
+            /*break*/
+            , 2];
+
+          case 5:
+            _i++;
+            return [3
+            /*break*/
+            , 1];
+
+          case 6:
+            return [2
+            /*return*/
+            ];
         }
-      },
-      enemy: {
-        enemy: enemy,
-        attributes: {
-          hp: 100,
-          certainty: 0
-        },
-        hooks: __spreadArrays([fightHooks.blankSlate("enemy")], enemy.hooks)
-      }
-    },
-    actions: {
-      INCREMENT_TURN: function INCREMENT_TURN(state) {
-        return __assign(__assign({}, state), {
-          turn: state.turn + 1
-        });
-      },
-      DRAW_CARD: function DRAW_CARD(state) {
-        var newState = __assign({}, state);
+      });
+    });
+  },
+  ADD_HOOK: function ADD_HOOK(_a) {
+    var data = _a.data,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("ADD_HOOK", data)];
 
-        var card = state.player.cards.draw.pop();
+          case 1:
+            _b.sent();
 
-        if (card) {
-          newState.player.cards.hand = __spreadArrays(newState.player.cards.hand, [card]);
-          return newState;
-        } else {
-          return false;
+            return [2
+            /*return*/
+            ];
         }
-      },
-      DISCARD_CARD: function DISCARD_CARD(state, _a) {
-        var card = _a.card;
+      });
+    });
+  },
+  REMOVE_HOOK: function REMOVE_HOOK(_a) {
+    var data = _a.data,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("REMOVE_HOOK", data)];
 
-        var newState = __assign({}, state);
+          case 1:
+            _b.sent();
 
-        newState.player.cards.hand = state.player.cards.hand.filter(function (cardInHand) {
-          return card.id !== cardInHand.id;
-        });
-        newState.player.cards.discard = __spreadArrays(state.player.cards.discard, [card]);
-        return newState;
-      },
-      SHUFFLE_CARDS: function SHUFFLE_CARDS(state) {
-        var newState = __assign({}, state);
-
-        newState.player.cards.draw = __spreadArrays((0, _lodash.shuffle)(state.player.cards.discard));
-        newState.player.cards.discard = [];
-        return newState;
-      },
-      SET_ENERGY: function SET_ENERGY(state, _a) {
-        var energy = _a.energy;
-        return __assign(__assign({}, state), {
-          player: __assign(__assign({}, state.player), {
-            energy: energy
-          })
-        });
-      },
-      SET_ATTRIBUTE: function SET_ATTRIBUTE(state, _a) {
-        var _b, _c;
-
-        var target = _a.target,
-            attribute = _a.attribute,
-            value = _a.value;
-        return __assign(__assign({}, state), (_b = {}, _b[target] = __assign(__assign({}, state[target]), {
-          attributes: __assign(__assign({}, state[target].attributes), (_c = {}, _c[attribute] = value, _c))
-        }), _b));
-      }
-    },
-    effects: {
-      START_FIGHT: function START_FIGHT(_a) {
-        var affect = _a.affect;
-        return __awaiter(void 0, void 0, void 0, function () {
-          return __generator(this, function (_b) {
-            switch (_b.label) {
-              case 0:
-                return [4
-                /*yield*/
-                , affect("START_TURN", {})];
-
-              case 1:
-                _b.sent();
-
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      START_TURN: function START_TURN(_a) {
-        var dispatch = _a.dispatch,
-            affect = _a.affect,
-            state = _a.state;
-        return __awaiter(void 0, void 0, void 0, function () {
-          return __generator(this, function (_b) {
-            switch (_b.label) {
-              case 0:
-                return [4
-                /*yield*/
-                , dispatch("INCREMENT_TURN", {})];
-
-              case 1:
-                _b.sent();
-
-                return [4
-                /*yield*/
-                , dispatch("SET_ENERGY", {
-                  energy: state.player.player.energy
-                })];
-
-              case 2:
-                _b.sent();
-
-                return [4
-                /*yield*/
-                , affect("RUN_HOOKS", {
-                  hooks: state.player.hooks.filter(function (hook) {
-                    return hook.when === "start-of-turn";
-                  })
-                })];
-
-              case 3:
-                _b.sent();
-
-                return [4
-                /*yield*/
-                , affect("DRAW_CARDS", {
-                  nCards: 5
-                })];
-
-              case 4:
-                _b.sent();
-
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      END_TURN: function END_TURN(_a) {
-        var dispatch = _a.dispatch,
-            affect = _a.affect,
-            state = _a.state;
-        return __awaiter(void 0, void 0, void 0, function () {
-          var _i, _b, card;
-
-          return __generator(this, function (_c) {
-            switch (_c.label) {
-              case 0:
-                _i = 0, _b = state.player.cards.hand;
-                _c.label = 1;
-
-              case 1:
-                if (!(_i < _b.length)) return [3
-                /*break*/
-                , 4];
-                card = _b[_i];
-                return [4
-                /*yield*/
-                , dispatch("DISCARD_CARD", {
-                  card: card
-                })];
-
-              case 2:
-                _c.sent();
-
-                _c.label = 3;
-
-              case 3:
-                _i++;
-                return [3
-                /*break*/
-                , 1];
-
-              case 4:
-                return [4
-                /*yield*/
-                , affect("RUN_EMENY_AI", {})];
-
-              case 5:
-                _c.sent();
-
-                return [4
-                /*yield*/
-                , affect("START_TURN", {})];
-
-              case 6:
-                _c.sent();
-
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      RUN_EMENY_AI: function RUN_EMENY_AI(_a) {
-        var affect = _a.affect,
-            state = _a.state;
-        return __awaiter(void 0, void 0, void 0, function () {
-          return __generator(this, function (_b) {
-            switch (_b.label) {
-              case 0:
-                return [4
-                /*yield*/
-                , affect("RUN_HOOKS", {
-                  hooks: state.enemy.hooks.filter(function (hook) {
-                    return hook.when === "start-of-turn";
-                  })
-                })];
-
-              case 1:
-                _b.sent();
-
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      RUN_HOOKS: function RUN_HOOKS(_a) {
-        var hooks = _a.data.hooks,
-            affect = _a.affect,
-            state = _a.state;
-        return __awaiter(void 0, void 0, void 0, function () {
-          var _i, hooks_1, hook, isScripted, isSuccess, shouldRun, _b, _c, effect;
-
-          return __generator(this, function (_d) {
-            switch (_d.label) {
-              case 0:
-                _i = 0, hooks_1 = hooks;
-                _d.label = 1;
-
-              case 1:
-                if (!(_i < hooks_1.length)) return [3
-                /*break*/
-                , 6];
-                hook = hooks_1[_i];
-                isScripted = state.turn === hook.turn;
-
-                if (hook.turn != undefined && !isScripted) {
-                  return [3
-                  /*break*/
-                  , 5];
-                }
-
-                isSuccess = hook.p >= Math.random();
-                shouldRun = isScripted ? isScripted && isSuccess : isSuccess;
-                if (!shouldRun) return [3
-                /*break*/
-                , 5];
-                _b = 0, _c = hook.effects;
-                _d.label = 2;
-
-              case 2:
-                if (!(_b < _c.length)) return [3
-                /*break*/
-                , 5];
-                effect = _c[_b];
-                return [4
-                /*yield*/
-                , affect(effect.name, effect.data)];
-
-              case 3:
-                _d.sent();
-
-                _d.label = 4;
-
-              case 4:
-                _b++;
-                return [3
-                /*break*/
-                , 2];
-
-              case 5:
-                _i++;
-                return [3
-                /*break*/
-                , 1];
-
-              case 6:
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      PLAY_CARD: function PLAY_CARD(_a) {
-        var card = _a.data.card,
-            dispatch = _a.dispatch,
-            affect = _a.affect,
-            state = _a.state;
-        return __awaiter(void 0, void 0, void 0, function () {
-          var _i, _b, effect;
-
-          return __generator(this, function (_c) {
-            switch (_c.label) {
-              case 0:
-                return [4
-                /*yield*/
-                , dispatch("SET_ENERGY", {
-                  energy: state.player.energy - card.cost
-                })];
-
-              case 1:
-                _c.sent();
-
-                _i = 0, _b = card.effects;
-                _c.label = 2;
-
-              case 2:
-                if (!(_i < _b.length)) return [3
-                /*break*/
-                , 5];
-                effect = _b[_i];
-                return [4
-                /*yield*/
-                , affect(effect.name, effect.data)];
-
-              case 3:
-                _c.sent();
-
-                _c.label = 4;
-
-              case 4:
-                _i++;
-                return [3
-                /*break*/
-                , 2];
-
-              case 5:
-                return [4
-                /*yield*/
-                , dispatch("DISCARD_CARD", {
-                  card: card
-                })];
-
-              case 6:
-                _c.sent();
-
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      DRAW_CARDS: function DRAW_CARDS(_a) {
-        var _b = _a.data.nCards,
-            nCards = _b === void 0 ? 1 : _b,
-            dispatch = _a.dispatch;
-        return __awaiter(void 0, void 0, void 0, function () {
-          var nCardsDrawn, successState;
-          return __generator(this, function (_c) {
-            switch (_c.label) {
-              case 0:
-                nCardsDrawn = 0;
-                _c.label = 1;
-
-              case 1:
-                if (!(nCardsDrawn < nCards)) return [3
-                /*break*/
-                , 6];
-                return [4
-                /*yield*/
-                , dispatch("DRAW_CARD", {})];
-
-              case 2:
-                successState = _c.sent();
-                if (!successState) return [3
-                /*break*/
-                , 3];
-                nCardsDrawn++;
-                return [3
-                /*break*/
-                , 5];
-
-              case 3:
-                return [4
-                /*yield*/
-                , dispatch("SHUFFLE_CARDS", {
-                  kind: "discard-to-draw"
-                })];
-
-              case 4:
-                _c.sent();
-
-                _c.label = 5;
-
-              case 5:
-                return [3
-                /*break*/
-                , 1];
-
-              case 6:
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      DEAL_DAMAGE: function DEAL_DAMAGE(_a) {
-        var _b = _a.data,
-            target = _b.target,
-            damage = _b.damage,
-            state = _a.state,
-            dispatch = _a.dispatch;
-        return __awaiter(void 0, void 0, void 0, function () {
-          var targetCertainty, unblockedDamage;
-          return __generator(this, function (_c) {
-            switch (_c.label) {
-              case 0:
-                targetCertainty = state[target].attributes.certainty;
-                unblockedDamage = damage - targetCertainty;
-                if (!(targetCertainty > 0)) return [3
-                /*break*/
-                , 2];
-                return [4
-                /*yield*/
-                , dispatch("SET_ATTRIBUTE", {
-                  target: target,
-                  value: Math.max(state[target].attributes.certainty - damage, 0),
-                  attribute: "certainty"
-                })];
-
-              case 1:
-                _c.sent();
-
-                _c.label = 2;
-
-              case 2:
-                if (!(unblockedDamage >= 0)) return [3
-                /*break*/
-                , 4];
-                return [4
-                /*yield*/
-                , dispatch("SET_ATTRIBUTE", {
-                  target: target,
-                  value: state[target].attributes.hp - unblockedDamage,
-                  attribute: "hp"
-                })];
-
-              case 3:
-                _c.sent();
-
-                _c.label = 4;
-
-              case 4:
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      GAIN_CERTAINTY: function GAIN_CERTAINTY(_a) {
-        var _b = _a.data,
-            target = _b.target,
-            certainty = _b.certainty,
-            state = _a.state,
-            dispatch = _a.dispatch;
-        return __awaiter(void 0, void 0, void 0, function () {
-          return __generator(this, function (_c) {
-            switch (_c.label) {
-              case 0:
-                return [4
-                /*yield*/
-                , dispatch("SET_ATTRIBUTE", {
-                  target: target,
-                  value: state[target].attributes.certainty + certainty,
-                  attribute: "certainty"
-                })];
-
-              case 1:
-                _c.sent();
-
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      },
-      CLEAR_CERTAINTY: function CLEAR_CERTAINTY(_a) {
-        var target = _a.data.target,
-            dispatch = _a.dispatch;
-        return __awaiter(void 0, void 0, void 0, function () {
-          return __generator(this, function (_b) {
-            switch (_b.label) {
-              case 0:
-                return [4
-                /*yield*/
-                , dispatch("SET_ATTRIBUTE", {
-                  target: target,
-                  value: 0,
-                  attribute: "certainty"
-                })];
-
-              case 1:
-                _b.sent();
-
-                return [2
-                /*return*/
-                ];
-            }
-          });
-        });
-      }
-    }
-  });
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  }
 };
-
-exports.initFight = initFight;
-},{"lodash":"../node_modules/lodash/lodash.js","~/logic/model":"logic/model.ts","~/game/hooks":"game/hooks.ts"}],"game/cards.ts":[function(require,module,exports) {
+exports.effects = effects;
+},{}],"fight/entity.model.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.startingDeck = exports.doubtCard = exports.insightCard = void 0;
+exports.effects = exports.actions = void 0;
+
+var _hooks = require("./hooks.model");
+
+var __assign = void 0 && (void 0).__assign || function () {
+  __assign = Object.assign || function (t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+
+      for (var p in s) {
+        if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+      }
+    }
+
+    return t;
+  };
+
+  return __assign.apply(this, arguments);
+};
+
+var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function (resolve) {
+      resolve(value);
+    });
+  }
+
+  return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+};
+
+var __generator = void 0 && (void 0).__generator || function (thisArg, body) {
+  var _ = {
+    label: 0,
+    sent: function sent() {
+      if (t[0] & 1) throw t[1];
+      return t[1];
+    },
+    trys: [],
+    ops: []
+  },
+      f,
+      y,
+      t,
+      g;
+  return g = {
+    next: verb(0),
+    "throw": verb(1),
+    "return": verb(2)
+  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
+    return this;
+  }), g;
+
+  function verb(n) {
+    return function (v) {
+      return step([n, v]);
+    };
+  }
+
+  function step(op) {
+    if (f) throw new TypeError("Generator is already executing.");
+
+    while (_) {
+      try {
+        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+        if (y = 0, t) op = [op[0] & 2, t.value];
+
+        switch (op[0]) {
+          case 0:
+          case 1:
+            t = op;
+            break;
+
+          case 4:
+            _.label++;
+            return {
+              value: op[1],
+              done: false
+            };
+
+          case 5:
+            _.label++;
+            y = op[1];
+            op = [0];
+            continue;
+
+          case 7:
+            op = _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+
+          default:
+            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+              _ = 0;
+              continue;
+            }
+
+            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+              _.label = op[1];
+              break;
+            }
+
+            if (op[0] === 6 && _.label < t[1]) {
+              _.label = t[1];
+              t = op;
+              break;
+            }
+
+            if (t && _.label < t[2]) {
+              _.label = t[2];
+
+              _.ops.push(op);
+
+              break;
+            }
+
+            if (t[2]) _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+        }
+
+        op = body.call(thisArg, _);
+      } catch (e) {
+        op = [6, e];
+        y = 0;
+      } finally {
+        f = t = 0;
+      }
+    }
+
+    if (op[0] & 5) throw op[1];
+    return {
+      value: op[0] ? op[1] : void 0,
+      done: true
+    };
+  }
+};
+
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
+
+var actions = __assign(__assign({}, _hooks.actions), {
+  SET_ATTRIBUTE: function SET_ATTRIBUTE(state, _a) {
+    var _b, _c;
+
+    var target = _a.target,
+        attribute = _a.attribute,
+        value = _a.value;
+    return __assign(__assign({}, state), (_b = {}, _b[target] = __assign(__assign({}, state[target]), {
+      attributes: __assign(__assign({}, state[target].attributes), (_c = {}, _c[attribute] = value, _c))
+    }), _b));
+  },
+  SET_STANCE: function SET_STANCE(state, _a) {
+    var _b;
+
+    var target = _a.target,
+        stance = _a.stance;
+    return __assign(__assign({}, state), (_b = {}, _b[target] = __assign(__assign({}, state[target]), {
+      stance: stance
+    }), _b));
+  },
+  ADD_POWER: function ADD_POWER(state, _a) {
+    var _b;
+
+    var target = _a.target,
+        power = _a.power;
+    return __assign(__assign({}, state), (_b = {}, _b[target] = __assign(__assign({}, state[target]), {
+      powers: __spreadArrays(state[target].powers, [power])
+    }), _b));
+  },
+  REMOVE_POWER: function REMOVE_POWER(state, _a) {
+    var _b;
+
+    var target = _a.target,
+        name = _a.name;
+    return __assign(__assign({}, state), (_b = {}, _b[target] = __assign(__assign({}, state[target]), {
+      powers: state[target].powers.filter(function (power) {
+        return power.name !== name;
+      })
+    }), _b));
+  }
+});
+
+exports.actions = actions;
+
+var effects = __assign(__assign({}, _hooks.effects), {
+  DEAL_DAMAGE: function DEAL_DAMAGE(_a) {
+    var _b = _a.data,
+        target = _b.target,
+        damage = _b.damage,
+        state = _a.state,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var targetCertainty, unblockedDamage;
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            targetCertainty = state[target].attributes.certainty;
+            unblockedDamage = damage - targetCertainty;
+            if (!(targetCertainty > 0)) return [3
+            /*break*/
+            , 2];
+            return [4
+            /*yield*/
+            , dispatch("SET_ATTRIBUTE", {
+              target: target,
+              value: Math.max(state[target].attributes.certainty - damage, 0),
+              attribute: "certainty"
+            })];
+
+          case 1:
+            _c.sent();
+
+            _c.label = 2;
+
+          case 2:
+            if (!(unblockedDamage >= 0)) return [3
+            /*break*/
+            , 4];
+            return [4
+            /*yield*/
+            , dispatch("SET_ATTRIBUTE", {
+              target: target,
+              value: state[target].attributes.hp - unblockedDamage,
+              attribute: "hp"
+            })];
+
+          case 3:
+            _c.sent();
+
+            _c.label = 4;
+
+          case 4:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  GAIN_CERTAINTY: function GAIN_CERTAINTY(_a) {
+    var _b = _a.data,
+        target = _b.target,
+        certainty = _b.certainty,
+        state = _a.state,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("SET_ATTRIBUTE", {
+              target: target,
+              value: state[target].attributes.certainty + certainty,
+              attribute: "certainty"
+            })];
+
+          case 1:
+            _c.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  CLEAR_CERTAINTY: function CLEAR_CERTAINTY(_a) {
+    var target = _a.data.target,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("SET_ATTRIBUTE", {
+              target: target,
+              value: 0,
+              attribute: "certainty"
+            })];
+
+          case 1:
+            _b.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  ENTER_STANCE: function ENTER_STANCE(_a) {
+    var _b = _a.data,
+        target = _b.target,
+        stance = _b.stance,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var _i, _c, hook;
+
+      return __generator(this, function (_d) {
+        switch (_d.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("SET_STANCE", {
+              target: target,
+              stance: stance
+            })];
+
+          case 1:
+            _d.sent();
+
+            _i = 0, _c = stance.hooks;
+            _d.label = 2;
+
+          case 2:
+            if (!(_i < _c.length)) return [3
+            /*break*/
+            , 5];
+            hook = _c[_i];
+            return [4
+            /*yield*/
+            , dispatch("ADD_HOOK", {
+              target: target,
+              hook: hook
+            })];
+
+          case 3:
+            _d.sent();
+
+            _d.label = 4;
+
+          case 4:
+            _i++;
+            return [3
+            /*break*/
+            , 2];
+
+          case 5:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  EXIT_STANCE: function EXIT_STANCE(_a) {
+    var target = _a.data.target,
+        dispatch = _a.dispatch,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var stance, _i, _b, hook;
+
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            stance = state[target].stance;
+            if (!stance) return [3
+            /*break*/
+            , 6];
+            _i = 0, _b = stance.hooks;
+            _c.label = 1;
+
+          case 1:
+            if (!(_i < _b.length)) return [3
+            /*break*/
+            , 4];
+            hook = _b[_i];
+            return [4
+            /*yield*/
+            , dispatch("REMOVE_HOOK", {
+              target: target,
+              hookId: hook.id
+            })];
+
+          case 2:
+            _c.sent();
+
+            _c.label = 3;
+
+          case 3:
+            _i++;
+            return [3
+            /*break*/
+            , 1];
+
+          case 4:
+            return [4
+            /*yield*/
+            , dispatch("SET_STANCE", {
+              target: target,
+              stance: null
+            })];
+
+          case 5:
+            _c.sent();
+
+            _c.label = 6;
+
+          case 6:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  ADD_POWER: function ADD_POWER(_a) {
+    var _b = _a.data,
+        target = _b.target,
+        power = _b.power,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var _i, _c, hook;
+
+      return __generator(this, function (_d) {
+        switch (_d.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("ADD_POWER", {
+              target: target,
+              power: power
+            })];
+
+          case 1:
+            _d.sent();
+
+            _i = 0, _c = power.hooks;
+            _d.label = 2;
+
+          case 2:
+            if (!(_i < _c.length)) return [3
+            /*break*/
+            , 5];
+            hook = _c[_i];
+            return [4
+            /*yield*/
+            , dispatch("ADD_HOOK", {
+              target: target,
+              hook: hook
+            })];
+
+          case 3:
+            _d.sent();
+
+            _d.label = 4;
+
+          case 4:
+            _i++;
+            return [3
+            /*break*/
+            , 2];
+
+          case 5:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  }
+});
+
+exports.effects = effects;
+},{"./hooks.model":"fight/hooks.model.ts"}],"fight/cards.model.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.effects = exports.actions = void 0;
 
 var _lodash = require("lodash");
+
+var __assign = void 0 && (void 0).__assign || function () {
+  __assign = Object.assign || function (t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+
+      for (var p in s) {
+        if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+      }
+    }
+
+    return t;
+  };
+
+  return __assign.apply(this, arguments);
+};
+
+var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function (resolve) {
+      resolve(value);
+    });
+  }
+
+  return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+};
+
+var __generator = void 0 && (void 0).__generator || function (thisArg, body) {
+  var _ = {
+    label: 0,
+    sent: function sent() {
+      if (t[0] & 1) throw t[1];
+      return t[1];
+    },
+    trys: [],
+    ops: []
+  },
+      f,
+      y,
+      t,
+      g;
+  return g = {
+    next: verb(0),
+    "throw": verb(1),
+    "return": verb(2)
+  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
+    return this;
+  }), g;
+
+  function verb(n) {
+    return function (v) {
+      return step([n, v]);
+    };
+  }
+
+  function step(op) {
+    if (f) throw new TypeError("Generator is already executing.");
+
+    while (_) {
+      try {
+        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+        if (y = 0, t) op = [op[0] & 2, t.value];
+
+        switch (op[0]) {
+          case 0:
+          case 1:
+            t = op;
+            break;
+
+          case 4:
+            _.label++;
+            return {
+              value: op[1],
+              done: false
+            };
+
+          case 5:
+            _.label++;
+            y = op[1];
+            op = [0];
+            continue;
+
+          case 7:
+            op = _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+
+          default:
+            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+              _ = 0;
+              continue;
+            }
+
+            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+              _.label = op[1];
+              break;
+            }
+
+            if (op[0] === 6 && _.label < t[1]) {
+              _.label = t[1];
+              t = op;
+              break;
+            }
+
+            if (t && _.label < t[2]) {
+              _.label = t[2];
+
+              _.ops.push(op);
+
+              break;
+            }
+
+            if (t[2]) _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+        }
+
+        op = body.call(thisArg, _);
+      } catch (e) {
+        op = [6, e];
+        y = 0;
+      } finally {
+        f = t = 0;
+      }
+    }
+
+    if (op[0] & 5) throw op[1];
+    return {
+      value: op[0] ? op[1] : void 0,
+      done: true
+    };
+  }
+};
+
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
+
+var actions = {
+  DRAW_CARD: function DRAW_CARD(state) {
+    var card = state.player.cards.draw[state.player.cards.draw.length - 1];
+
+    if (card) {
+      return __assign(__assign({}, state), {
+        player: __assign(__assign({}, state.player), {
+          cards: __assign(__assign({}, state.player.cards), {
+            hand: __spreadArrays(state.player.cards.hand, [card]),
+            draw: state.player.cards.draw.filter(function (c) {
+              return c.id !== card.id;
+            })
+          })
+        })
+      });
+    } else {
+      return false;
+    }
+  },
+  MOVE_CARD: function MOVE_CARD(state, _a) {
+    var _b;
+
+    var card = _a.card,
+        from = _a.from,
+        to = _a.to;
+    var newFromPile = state.player.cards[from].filter(function (c) {
+      return c.id !== card.id;
+    });
+
+    if (newFromPile.length === state.player.cards[from].length) {
+      return false;
+    }
+
+    return __assign(__assign({}, state), {
+      player: __assign(__assign({}, state.player), {
+        cards: __assign(__assign({}, state.player.cards), (_b = {}, _b[from] = newFromPile, _b[to] = __spreadArrays(state.player.cards[to], [card]), _b))
+      })
+    });
+  },
+  SHUFFLE_CARDS: function SHUFFLE_CARDS(state) {
+    return __assign(__assign({}, state), {
+      player: __assign(__assign({}, state.player), {
+        cards: __assign(__assign({}, state.player.cards), {
+          draw: (0, _lodash.shuffle)(state.player.cards.discard),
+          discard: []
+        })
+      })
+    });
+  },
+  SPAWN_CARD: function SPAWN_CARD(state, _a) {
+    var _b;
+
+    var card = _a.card,
+        pile = _a.pile;
+    return __assign(__assign({}, state), {
+      player: __assign(__assign({}, state.player), {
+        cards: __assign(__assign({}, state.player.cards), (_b = {}, _b[pile] = (0, _lodash.shuffle)(__spreadArrays(state.player.cards[pile], [card])), _b))
+      })
+    });
+  }
+};
+exports.actions = actions;
+var effects = {
+  DRAW_CARDS: function DRAW_CARDS(_a) {
+    var _b = _a.data.nCards,
+        nCards = _b === void 0 ? 1 : _b,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var nCardsDrawn, successState;
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            nCardsDrawn = 0;
+            _c.label = 1;
+
+          case 1:
+            if (!(nCardsDrawn < nCards)) return [3
+            /*break*/
+            , 6];
+            return [4
+            /*yield*/
+            , dispatch("DRAW_CARD", {})];
+
+          case 2:
+            successState = _c.sent();
+            if (!successState) return [3
+            /*break*/
+            , 3];
+            nCardsDrawn++;
+            return [3
+            /*break*/
+            , 5];
+
+          case 3:
+            return [4
+            /*yield*/
+            , dispatch("SHUFFLE_CARDS", {
+              kind: "discard-to-draw"
+            })];
+
+          case 4:
+            _c.sent();
+
+            _c.label = 5;
+
+          case 5:
+            return [3
+            /*break*/
+            , 1];
+
+          case 6:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  DISCARD_CARD: function DISCARD_CARD(_a) {
+    var cardId = _a.data.cardId,
+        dispatch = _a.dispatch,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var card;
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            card = state.player.cards.hand.find(function (c) {
+              return c.id === cardId;
+            });
+            if (!card) return [3
+            /*break*/
+            , 2];
+            return [4
+            /*yield*/
+            , dispatch("MOVE_CARD", {
+              card: card,
+              from: "hand",
+              to: "discard"
+            })];
+
+          case 1:
+            _b.sent();
+
+            _b.label = 2;
+
+          case 2:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  EXHAUST_CARD: function EXHAUST_CARD(_a) {
+    var cardId = _a.data.cardId,
+        dispatch = _a.dispatch,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var card;
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            card = state.player.cards.hand.find(function (c) {
+              return c.id === cardId;
+            });
+            if (!card) return [3
+            /*break*/
+            , 2];
+            return [4
+            /*yield*/
+            , dispatch("MOVE_CARD", {
+              card: card,
+              from: "hand",
+              to: "exhaust"
+            })];
+
+          case 1:
+            _b.sent();
+
+            _b.label = 2;
+
+          case 2:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  ADD_CARD: function ADD_CARD(_a) {
+    var _b = _a.data,
+        card = _b.card,
+        pile = _b.pile,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("SPAWN_CARD", {
+              pile: pile,
+              card: card()
+            })];
+
+          case 1:
+            _c.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  }
+};
+exports.effects = effects;
+},{"lodash":"../node_modules/lodash/lodash.js"}],"fight/player.model.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.effects = exports.actions = void 0;
+
+var _entity = require("./entity.model");
+
+var _cards = require("./cards.model");
+
+var __assign = void 0 && (void 0).__assign || function () {
+  __assign = Object.assign || function (t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+
+      for (var p in s) {
+        if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+      }
+    }
+
+    return t;
+  };
+
+  return __assign.apply(this, arguments);
+};
+
+var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function (resolve) {
+      resolve(value);
+    });
+  }
+
+  return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+};
+
+var __generator = void 0 && (void 0).__generator || function (thisArg, body) {
+  var _ = {
+    label: 0,
+    sent: function sent() {
+      if (t[0] & 1) throw t[1];
+      return t[1];
+    },
+    trys: [],
+    ops: []
+  },
+      f,
+      y,
+      t,
+      g;
+  return g = {
+    next: verb(0),
+    "throw": verb(1),
+    "return": verb(2)
+  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
+    return this;
+  }), g;
+
+  function verb(n) {
+    return function (v) {
+      return step([n, v]);
+    };
+  }
+
+  function step(op) {
+    if (f) throw new TypeError("Generator is already executing.");
+
+    while (_) {
+      try {
+        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+        if (y = 0, t) op = [op[0] & 2, t.value];
+
+        switch (op[0]) {
+          case 0:
+          case 1:
+            t = op;
+            break;
+
+          case 4:
+            _.label++;
+            return {
+              value: op[1],
+              done: false
+            };
+
+          case 5:
+            _.label++;
+            y = op[1];
+            op = [0];
+            continue;
+
+          case 7:
+            op = _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+
+          default:
+            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+              _ = 0;
+              continue;
+            }
+
+            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+              _.label = op[1];
+              break;
+            }
+
+            if (op[0] === 6 && _.label < t[1]) {
+              _.label = t[1];
+              t = op;
+              break;
+            }
+
+            if (t && _.label < t[2]) {
+              _.label = t[2];
+
+              _.ops.push(op);
+
+              break;
+            }
+
+            if (t[2]) _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+        }
+
+        op = body.call(thisArg, _);
+      } catch (e) {
+        op = [6, e];
+        y = 0;
+      } finally {
+        f = t = 0;
+      }
+    }
+
+    if (op[0] & 5) throw op[1];
+    return {
+      value: op[0] ? op[1] : void 0,
+      done: true
+    };
+  }
+};
+
+var actions = __assign(__assign(__assign({}, _entity.actions), _cards.actions), {
+  SET_ENERGY: function SET_ENERGY(state, _a) {
+    var energy = _a.energy;
+    return __assign(__assign({}, state), {
+      player: __assign(__assign({}, state.player), {
+        energy: energy
+      })
+    });
+  }
+});
+
+exports.actions = actions;
+
+var effects = __assign(__assign(__assign({}, _entity.effects), _cards.effects), {
+  START_TURN: function START_TURN(_a) {
+    var dispatch = _a.dispatch,
+        affect = _a.affect,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("INCREMENT_TURN", {})];
+
+          case 1:
+            _b.sent();
+
+            return [4
+            /*yield*/
+            , dispatch("SET_ENERGY", {
+              energy: state.player.player.energy
+            })];
+
+          case 2:
+            _b.sent();
+
+            return [4
+            /*yield*/
+            , affect("RUN_HOOKS", {
+              hooks: state.player.hooks.filter(function (hook) {
+                return hook.when === "start-of-turn";
+              })
+            })];
+
+          case 3:
+            _b.sent();
+
+            return [4
+            /*yield*/
+            , affect("DRAW_CARDS", {
+              nCards: 5
+            })];
+
+          case 4:
+            _b.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  END_TURN: function END_TURN(_a) {
+    var dispatch = _a.dispatch,
+        affect = _a.affect,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var _i, _b, card;
+
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , affect("RUN_HOOKS", {
+              hooks: state.player.hooks.filter(function (hook) {
+                return hook.when === "end-of-turn";
+              })
+            })];
+
+          case 1:
+            _c.sent();
+
+            _i = 0, _b = state.player.cards.hand;
+            _c.label = 2;
+
+          case 2:
+            if (!(_i < _b.length)) return [3
+            /*break*/
+            , 5];
+            card = _b[_i];
+            return [4
+            /*yield*/
+            , dispatch("MOVE_CARD", {
+              card: card,
+              from: "hand",
+              to: "discard"
+            })];
+
+          case 3:
+            _c.sent();
+
+            _c.label = 4;
+
+          case 4:
+            _i++;
+            return [3
+            /*break*/
+            , 2];
+
+          case 5:
+            return [4
+            /*yield*/
+            , affect("RUN_EMENY_AI", {})];
+
+          case 6:
+            _c.sent();
+
+            return [4
+            /*yield*/
+            , affect("START_TURN", {})];
+
+          case 7:
+            _c.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  PLAY_CARD: function PLAY_CARD(_a) {
+    var card = _a.data.card,
+        dispatch = _a.dispatch,
+        affect = _a.affect,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var _i, _b, effect;
+
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("SET_ENERGY", {
+              energy: state.player.energy - card.cost
+            })];
+
+          case 1:
+            _c.sent();
+
+            _i = 0, _b = card.effects;
+            _c.label = 2;
+
+          case 2:
+            if (!(_i < _b.length)) return [3
+            /*break*/
+            , 5];
+            effect = _b[_i];
+            return [4
+            /*yield*/
+            , affect(effect.name, effect.data)];
+
+          case 3:
+            _c.sent();
+
+            _c.label = 4;
+
+          case 4:
+            _i++;
+            return [3
+            /*break*/
+            , 2];
+
+          case 5:
+            return [4
+            /*yield*/
+            , dispatch("MOVE_CARD", {
+              card: card,
+              from: "hand",
+              to: "discard"
+            })];
+
+          case 6:
+            _c.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  }
+});
+
+exports.effects = effects;
+},{"./entity.model":"fight/entity.model.ts","./cards.model":"fight/cards.model.ts"}],"fight/enemy.model.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.effects = exports.actions = void 0;
+
+var _entity = require("./entity.model");
+
+var __assign = void 0 && (void 0).__assign || function () {
+  __assign = Object.assign || function (t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+
+      for (var p in s) {
+        if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+      }
+    }
+
+    return t;
+  };
+
+  return __assign.apply(this, arguments);
+};
+
+var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function (resolve) {
+      resolve(value);
+    });
+  }
+
+  return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+};
+
+var __generator = void 0 && (void 0).__generator || function (thisArg, body) {
+  var _ = {
+    label: 0,
+    sent: function sent() {
+      if (t[0] & 1) throw t[1];
+      return t[1];
+    },
+    trys: [],
+    ops: []
+  },
+      f,
+      y,
+      t,
+      g;
+  return g = {
+    next: verb(0),
+    "throw": verb(1),
+    "return": verb(2)
+  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
+    return this;
+  }), g;
+
+  function verb(n) {
+    return function (v) {
+      return step([n, v]);
+    };
+  }
+
+  function step(op) {
+    if (f) throw new TypeError("Generator is already executing.");
+
+    while (_) {
+      try {
+        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+        if (y = 0, t) op = [op[0] & 2, t.value];
+
+        switch (op[0]) {
+          case 0:
+          case 1:
+            t = op;
+            break;
+
+          case 4:
+            _.label++;
+            return {
+              value: op[1],
+              done: false
+            };
+
+          case 5:
+            _.label++;
+            y = op[1];
+            op = [0];
+            continue;
+
+          case 7:
+            op = _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+
+          default:
+            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+              _ = 0;
+              continue;
+            }
+
+            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+              _.label = op[1];
+              break;
+            }
+
+            if (op[0] === 6 && _.label < t[1]) {
+              _.label = t[1];
+              t = op;
+              break;
+            }
+
+            if (t && _.label < t[2]) {
+              _.label = t[2];
+
+              _.ops.push(op);
+
+              break;
+            }
+
+            if (t[2]) _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+        }
+
+        op = body.call(thisArg, _);
+      } catch (e) {
+        op = [6, e];
+        y = 0;
+      } finally {
+        f = t = 0;
+      }
+    }
+
+    if (op[0] & 5) throw op[1];
+    return {
+      value: op[0] ? op[1] : void 0,
+      done: true
+    };
+  }
+};
+
+var actions = __assign({}, _entity.actions);
+
+exports.actions = actions;
+
+var effects = __assign(__assign({}, _entity.effects), {
+  RUN_EMENY_AI: function RUN_EMENY_AI(_a) {
+    var affect = _a.affect,
+        state = _a.state;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , affect("RUN_HOOKS", {
+              hooks: state.enemy.hooks.filter(function (hook) {
+                return hook.when === "start-of-turn";
+              })
+            })];
+
+          case 1:
+            _b.sent();
+
+            return [4
+            /*yield*/
+            , affect("RUN_HOOKS", {
+              hooks: state.enemy.hooks.filter(function (hook) {
+                return hook.when === "end-of-turn";
+              })
+            })];
+
+          case 2:
+            _b.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  RUN_MECHANIC: function RUN_MECHANIC(_a) {
+    var affect = _a.affect,
+        mechanic = _a.data.mechanic;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var _i, _b, effect;
+
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            _i = 0, _b = mechanic.effects;
+            _c.label = 1;
+
+          case 1:
+            if (!(_i < _b.length)) return [3
+            /*break*/
+            , 4];
+            effect = _b[_i];
+            return [4
+            /*yield*/
+            , affect(effect.name, effect.data)];
+
+          case 2:
+            _c.sent();
+
+            _c.label = 3;
+
+          case 3:
+            _i++;
+            return [3
+            /*break*/
+            , 1];
+
+          case 4:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  }
+});
+
+exports.effects = effects;
+},{"./entity.model":"fight/entity.model.ts"}],"fight/fight.model.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.effects = exports.actions = void 0;
+
+var _player = require("./player.model");
+
+var _enemy = require("./enemy.model");
+
+var __assign = void 0 && (void 0).__assign || function () {
+  __assign = Object.assign || function (t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+
+      for (var p in s) {
+        if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+      }
+    }
+
+    return t;
+  };
+
+  return __assign.apply(this, arguments);
+};
+
+var __awaiter = void 0 && (void 0).__awaiter || function (thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function (resolve) {
+      resolve(value);
+    });
+  }
+
+  return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+};
+
+var __generator = void 0 && (void 0).__generator || function (thisArg, body) {
+  var _ = {
+    label: 0,
+    sent: function sent() {
+      if (t[0] & 1) throw t[1];
+      return t[1];
+    },
+    trys: [],
+    ops: []
+  },
+      f,
+      y,
+      t,
+      g;
+  return g = {
+    next: verb(0),
+    "throw": verb(1),
+    "return": verb(2)
+  }, typeof Symbol === "function" && (g[Symbol.iterator] = function () {
+    return this;
+  }), g;
+
+  function verb(n) {
+    return function (v) {
+      return step([n, v]);
+    };
+  }
+
+  function step(op) {
+    if (f) throw new TypeError("Generator is already executing.");
+
+    while (_) {
+      try {
+        if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+        if (y = 0, t) op = [op[0] & 2, t.value];
+
+        switch (op[0]) {
+          case 0:
+          case 1:
+            t = op;
+            break;
+
+          case 4:
+            _.label++;
+            return {
+              value: op[1],
+              done: false
+            };
+
+          case 5:
+            _.label++;
+            y = op[1];
+            op = [0];
+            continue;
+
+          case 7:
+            op = _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+
+          default:
+            if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+              _ = 0;
+              continue;
+            }
+
+            if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
+              _.label = op[1];
+              break;
+            }
+
+            if (op[0] === 6 && _.label < t[1]) {
+              _.label = t[1];
+              t = op;
+              break;
+            }
+
+            if (t && _.label < t[2]) {
+              _.label = t[2];
+
+              _.ops.push(op);
+
+              break;
+            }
+
+            if (t[2]) _.ops.pop();
+
+            _.trys.pop();
+
+            continue;
+        }
+
+        op = body.call(thisArg, _);
+      } catch (e) {
+        op = [6, e];
+        y = 0;
+      } finally {
+        f = t = 0;
+      }
+    }
+
+    if (op[0] & 5) throw op[1];
+    return {
+      value: op[0] ? op[1] : void 0,
+      done: true
+    };
+  }
+};
+
+var actions = __assign(__assign(__assign({}, _player.actions), _enemy.actions), {
+  INCREMENT_TURN: function INCREMENT_TURN(state) {
+    return __assign(__assign({}, state), {
+      turn: state.turn + 1
+    });
+  }
+});
+
+exports.actions = actions;
+
+var effects = __assign(__assign(__assign({}, _player.effects), _enemy.effects), {
+  START_FIGHT: function START_FIGHT(_a) {
+    var affect = _a.affect;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_b) {
+        switch (_b.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , affect("START_TURN", {})];
+
+          case 1:
+            _b.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  }
+});
+
+exports.effects = effects;
+},{"./player.model":"fight/player.model.ts","./enemy.model":"fight/enemy.model.ts"}],"fight/FightModel.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.initFight = void 0;
+
+var _lodash = require("lodash");
+
+var _model = _interopRequireDefault(require("~/logic/model"));
+
+var baseHooks = _interopRequireWildcard(require("~/game/baseHooks"));
+
+var _fight = require("./fight.model");
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var __assign = void 0 && (void 0).__assign || function () {
   __assign = Object.assign || function (t) {
@@ -64753,15 +66091,88 @@ var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
   return r;
 };
 
-var createCard = function createCard(card) {
-  var id = Math.random() * 100000;
-  return __assign({
-    id: id
-  }, card);
+var initFight = function initFight(player, enemy) {
+  return new _model.default({
+    state: {
+      turn: 0,
+      player: {
+        player: player,
+        energy: 3,
+        attributes: __assign({}, player.baseAttributes),
+        hooks: [baseHooks.blankSlate("player")],
+        stance: null,
+        powers: [],
+        cards: {
+          hand: [],
+          draw: (0, _lodash.shuffle)(player.deck),
+          discard: [],
+          exhaust: []
+        }
+      },
+      enemy: {
+        enemy: enemy,
+        attributes: __assign({}, enemy.baseAttributes),
+        hooks: __spreadArrays([baseHooks.blankSlate("enemy")], enemy.baseHooks),
+        stance: null,
+        powers: []
+      }
+    },
+    actions: _fight.actions,
+    effects: _fight.effects
+  });
 };
 
-var insightCard = function insightCard() {
-  return createCard({
+exports.initFight = initFight;
+},{"lodash":"../node_modules/lodash/lodash.js","~/logic/model":"logic/model.ts","~/game/baseHooks":"game/baseHooks.ts","./fight.model":"fight/fight.model.ts"}],"fight/FightContext.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = exports.useFight = void 0;
+
+var _react = require("react");
+
+var _ModelProvider = require("~/logic/ModelProvider");
+
+var _FightModel = require("./FightModel");
+
+var FightContext = (0, _ModelProvider.createModelContext)((0, _FightModel.initFight)({
+  deck: [],
+  energy: 0,
+  baseAttributes: {
+    hp: 0,
+    certainty: 0
+  }
+}, {
+  name: "Loading...",
+  baseAttributes: {
+    hp: 0,
+    certainty: 0
+  },
+  baseHooks: []
+}));
+
+var useFight = function useFight() {
+  return (0, _react.useContext)(FightContext);
+};
+
+exports.useFight = useFight;
+var _default = FightContext;
+exports.default = _default;
+},{"react":"../node_modules/react/index.js","~/logic/ModelProvider":"logic/ModelProvider.tsx","./FightModel":"fight/FightModel.ts"}],"game/cards/base.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.doubt = exports.insight = void 0;
+
+var _ids = require("~/utils/ids");
+
+var insight = function insight() {
+  return {
+    id: (0, _ids.nextID)(),
     name: "Insight",
     type: "skill",
     cost: 1,
@@ -64772,13 +66183,14 @@ var insightCard = function insightCard() {
         certainty: 12
       }
     }]
-  });
+  };
 };
 
-exports.insightCard = insightCard;
+exports.insight = insight;
 
-var doubtCard = function doubtCard() {
-  return createCard({
+var doubt = function doubt() {
+  return {
+    id: (0, _ids.nextID)(),
     name: "Doubt",
     type: "attack",
     cost: 1,
@@ -64789,17 +66201,453 @@ var doubtCard = function doubtCard() {
         damage: 10
       }
     }]
-  });
+  };
 };
 
-exports.doubtCard = doubtCard;
+exports.doubt = doubt;
+},{"~/utils/ids":"utils/ids.ts"}],"game/cards/decks.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.startingDeck = void 0;
+
+var _lodash = require("lodash");
+
+var baseCards = _interopRequireWildcard(require("./base"));
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
 
 var startingDeck = function startingDeck() {
-  return __spreadArrays((0, _lodash.times)(5, insightCard), (0, _lodash.times)(5, doubtCard));
+  return __spreadArrays((0, _lodash.times)(5, baseCards.insight), (0, _lodash.times)(5, baseCards.doubt));
 };
 
 exports.startingDeck = startingDeck;
-},{"lodash":"../node_modules/lodash/lodash.js"}],"components/fight/FightStageHeader.tsx":[function(require,module,exports) {
+},{"lodash":"../node_modules/lodash/lodash.js","./base":"game/cards/base.ts"}],"game/player/default.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.defaultPlayer = void 0;
+
+var _decks = require("~/game/cards/decks");
+
+var defaultPlayer = function defaultPlayer() {
+  return {
+    deck: (0, _decks.startingDeck)(),
+    energy: 3,
+    baseAttributes: {
+      hp: 100,
+      certainty: 0
+    }
+  };
+};
+
+exports.defaultPlayer = defaultPlayer;
+},{"~/game/cards/decks":"game/cards/decks.ts"}],"game/cards/curses.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.uncertain = void 0;
+
+var _ids = require("~/utils/ids");
+
+var uncertain = function uncertain() {
+  var id = (0, _ids.nextID)();
+  return {
+    id: id,
+    name: "Uncertain",
+    type: "curse",
+    cost: 1,
+    effects: [{
+      name: "EXHAUST_CARD",
+      data: {
+        cardId: id
+      }
+    }]
+  };
+};
+
+exports.uncertain = uncertain;
+},{"~/utils/ids":"utils/ids.ts"}],"game/ai/descartes/stances.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.clearAndDistinct = exports.methodologicalDoubt = void 0;
+
+var _curses = require("~/game/cards/curses");
+
+var _ids = require("~/utils/ids");
+
+var methodologicalDoubt = function methodologicalDoubt() {
+  return {
+    name: "Methodological Doubt",
+    hooks: [{
+      id: (0, _ids.nextID)(),
+      p: 1,
+      turns: [],
+      when: "start-of-turn",
+      effects: [{
+        name: "ADD_CARD",
+        data: {
+          card: _curses.uncertain,
+          pile: "draw"
+        }
+      }]
+    }]
+  };
+};
+
+exports.methodologicalDoubt = methodologicalDoubt;
+
+var clearAndDistinct = function clearAndDistinct() {
+  return {
+    name: "Clear and Distinct",
+    hooks: [{
+      id: (0, _ids.nextID)(),
+      p: 1,
+      turns: [],
+      when: "end-of-turn",
+      effects: [{
+        name: "GAIN_CERTAINTY",
+        data: {
+          target: "player",
+          certainty: 5
+        }
+      }, {
+        name: "GAIN_CERTAINTY",
+        data: {
+          target: "enemy",
+          certainty: 5
+        }
+      }]
+    }]
+  };
+};
+
+exports.clearAndDistinct = clearAndDistinct;
+},{"~/game/cards/curses":"game/cards/curses.ts","~/utils/ids":"utils/ids.ts"}],"game/ai/descartes/powers.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.cogito = void 0;
+
+var _ids = require("~/utils/ids");
+
+var cogito = function cogito() {
+  return {
+    name: "Cogito",
+    hooks: [{
+      id: (0, _ids.nextID)(),
+      p: 1,
+      turns: [],
+      when: "start-of-turn",
+      effects: [{
+        name: "GAIN_CERTAINTY",
+        data: {
+          target: "enemy",
+          certainty: 3
+        }
+      }]
+    }]
+  };
+};
+
+exports.cogito = cogito;
+},{"~/utils/ids":"utils/ids.ts"}],"game/ai/descartes/mechanics.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.clearAndDistinct = exports.cogito = exports.geniumMalignum = exports.dreamArgument = exports.insight = exports.doubt = exports.raze = void 0;
+
+var stances = _interopRequireWildcard(require("./stances"));
+
+var powers = _interopRequireWildcard(require("./powers"));
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var raze = {
+  name: "Raze",
+  effects: [{
+    name: "ENTER_STANCE",
+    data: {
+      target: "enemy",
+      stance: stances.methodologicalDoubt()
+    }
+  }]
+};
+exports.raze = raze;
+var doubt = {
+  name: "Doubt",
+  effects: [{
+    name: "DEAL_DAMAGE",
+    data: {
+      target: "player",
+      damage: 10
+    }
+  }]
+};
+exports.doubt = doubt;
+var insight = {
+  name: "Insight",
+  effects: [{
+    name: "GAIN_CERTAINTY",
+    data: {
+      target: "enemy",
+      certainty: 12
+    }
+  }]
+};
+exports.insight = insight;
+var dreamArgument = {
+  name: "Dream Argument",
+  effects: [{
+    name: "DEAL_DAMAGE",
+    data: {
+      target: "player",
+      damage: 15
+    }
+  }]
+};
+exports.dreamArgument = dreamArgument;
+var geniumMalignum = {
+  name: "Genium Malignum",
+  effects: [{
+    name: "DEAL_DAMAGE",
+    data: {
+      target: "player",
+      damage: 12
+    }
+  }]
+};
+exports.geniumMalignum = geniumMalignum;
+var cogito = {
+  name: "Cogito",
+  effects: [{
+    name: "ADD_POWER",
+    data: {
+      target: "enemy",
+      power: powers.cogito()
+    }
+  }]
+};
+exports.cogito = cogito;
+var clearAndDistinct = {
+  name: "Clear and Distinct",
+  effects: [{
+    name: "ENTER_STANCE",
+    data: {
+      target: "enemy",
+      stance: stances.clearAndDistinct()
+    }
+  }]
+};
+exports.clearAndDistinct = clearAndDistinct;
+},{"./stances":"game/ai/descartes/stances.ts","./powers":"game/ai/descartes/powers.ts"}],"game/ai/descartes/hooks.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.clearAndDistinct = exports.cogito = exports.geniumMalignum = exports.dreamArgument = exports.insight = exports.doubt = exports.raze = void 0;
+
+var _ids = require("~/utils/ids");
+
+var mechanics = _interopRequireWildcard(require("./mechanics"));
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var raze = function raze() {
+  return {
+    id: (0, _ids.nextID)(),
+    p: 1,
+    turns: [1],
+    when: "start-of-turn",
+    effects: [{
+      name: "RUN_MECHANIC",
+      data: {
+        mechanic: mechanics.raze
+      }
+    }]
+  };
+};
+
+exports.raze = raze;
+
+var doubt = function doubt() {
+  return {
+    id: (0, _ids.nextID)(),
+    p: 0.95,
+    turns: [],
+    when: "start-of-turn",
+    effects: [{
+      name: "RUN_MECHANIC",
+      data: {
+        mechanic: mechanics.doubt
+      }
+    }]
+  };
+};
+
+exports.doubt = doubt;
+
+var insight = function insight() {
+  return {
+    id: (0, _ids.nextID)(),
+    p: 0.25,
+    turns: [],
+    when: "start-of-turn",
+    effects: [{
+      name: "RUN_MECHANIC",
+      data: {
+        mechanic: mechanics.insight
+      }
+    }]
+  };
+};
+
+exports.insight = insight;
+
+var dreamArgument = function dreamArgument() {
+  var id = (0, _ids.nextID)();
+  return {
+    id: id,
+    p: 0.66,
+    turns: [],
+    when: "start-of-turn",
+    effects: [{
+      name: "RUN_MECHANIC",
+      data: {
+        mechanic: mechanics.dreamArgument
+      }
+    }, {
+      name: "REMOVE_HOOK",
+      data: {
+        target: "enemy",
+        hookId: id
+      }
+    }]
+  };
+};
+
+exports.dreamArgument = dreamArgument;
+
+var geniumMalignum = function geniumMalignum() {
+  var id = (0, _ids.nextID)();
+  return {
+    id: id,
+    p: 0.33,
+    turns: [],
+    when: "start-of-turn",
+    effects: [{
+      name: "RUN_MECHANIC",
+      data: {
+        mechanic: mechanics.geniumMalignum
+      }
+    }, {
+      name: "REMOVE_HOOK",
+      data: {
+        target: "enemy",
+        hookId: id
+      }
+    }]
+  };
+};
+
+exports.geniumMalignum = geniumMalignum;
+
+var cogito = function cogito() {
+  var id = (0, _ids.nextID)();
+  return {
+    id: id,
+    p: 1,
+    turns: [3],
+    when: "start-of-turn",
+    effects: [{
+      name: "RUN_MECHANIC",
+      data: {
+        mechanic: mechanics.cogito
+      }
+    }]
+  };
+};
+
+exports.cogito = cogito;
+
+var clearAndDistinct = function clearAndDistinct() {
+  var id = (0, _ids.nextID)();
+  return {
+    id: id,
+    p: 1,
+    turns: [4],
+    when: "start-of-turn",
+    effects: [{
+      name: "RUN_MECHANIC",
+      data: {
+        mechanic: mechanics.clearAndDistinct
+      }
+    }]
+  };
+};
+
+exports.clearAndDistinct = clearAndDistinct;
+},{"~/utils/ids":"utils/ids.ts","./mechanics":"game/ai/descartes/mechanics.ts"}],"game/ai/descartes/index.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createDescartes = void 0;
+
+var hooks = _interopRequireWildcard(require("./hooks"));
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var createDescartes = function createDescartes() {
+  return {
+    name: "Descartes",
+    baseAttributes: {
+      hp: 100,
+      certainty: 0
+    },
+    baseHooks: [hooks.raze(), hooks.dreamArgument(), hooks.geniumMalignum(), hooks.doubt(), hooks.insight(), hooks.cogito(), hooks.clearAndDistinct()]
+  };
+};
+
+exports.createDescartes = createDescartes;
+},{"./hooks":"game/ai/descartes/hooks.ts"}],"components/fight/FightStageHeader.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -64810,6 +66658,8 @@ exports.default = void 0;
 var React = _interopRequireWildcard(require("react"));
 
 var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FightContext = require("~/fight/FightContext");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -64829,9 +66679,9 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var FightStageHeader = function FightStageHeader(_a) {
-  var fightState = _a.fightState;
-  return React.createElement(Wrapper, null, React.createElement("h1", null, "FIGHT!"), React.createElement("span", null, "Current Round: ", fightState.turn));
+var FightStageHeader = function FightStageHeader() {
+  var turn = (0, _FightContext.useFight)()[0].turn;
+  return React.createElement(Wrapper, null, React.createElement("h1", null, "FIGHT!"), React.createElement("span", null, "Current Round: ", turn));
 };
 
 var Wrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject([""], [""])));
@@ -64839,7 +66689,7 @@ var Wrapper = _styledComponents.default.div(templateObject_1 || (templateObject_
 var _default = FightStageHeader;
 exports.default = _default;
 var templateObject_1;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js"}],"components/ui/PaperCard.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx"}],"components/ui/PaperCard.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -64914,13 +66764,55 @@ var CardType = _styledComponents.default.span(templateObject_9 || (templateObjec
 
     case "skill":
       return "aquamarine";
+
+    case "curse":
+      return "plum";
   }
 });
 
 var _default = PaperCard;
 exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5, templateObject_6, templateObject_7, templateObject_8, templateObject_9;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js"}],"components/fight/CardPile.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js"}],"components/ui/FadeAwayValue.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _react = _interopRequireDefault(require("react"));
+
+var _framerMotion = require("framer-motion");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var FadeAwayValue = function FadeAwayValue(_a) {
+  var _b = _a.duration,
+      duration = _b === void 0 ? 0.5 : _b,
+      children = _a.children;
+  return _react.default.createElement(_framerMotion.motion.div, {
+    initial: {
+      scale: 0.1,
+      y: -20
+    },
+    animate: {
+      scale: 2,
+      y: -80,
+      opacity: 0
+    },
+    transition: {
+      duration: duration
+    },
+    style: {
+      position: "absolute"
+    }
+  }, children);
+};
+
+var _default = FadeAwayValue;
+exports.default = _default;
+},{"react":"../node_modules/react/index.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js"}],"components/fight/CardPile.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -64936,7 +66828,11 @@ var _styledComponents = _interopRequireDefault(require("styled-components"));
 
 var _framerMotion = require("framer-motion");
 
-var _PaperCard = _interopRequireDefault(require("../ui/PaperCard"));
+var _FightContext = require("~/fight/FightContext");
+
+var _PaperCard = _interopRequireDefault(require("~/components/ui/PaperCard"));
+
+var _FadeAwayValue = _interopRequireDefault(require("~/components/ui/FadeAwayValue"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -64952,10 +66848,47 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
+
 var CardPile = function CardPile(_a) {
   var name = _a.name,
       cards = _a.cards;
-  return _react.default.createElement(CardPileWrapper, null, (0, _lodash.capitalize)(name), " Pile: ", cards.length, _react.default.createElement("div", null, cards.map(function (card, i) {
+
+  var _b = (0, _FightContext.useFight)(),
+      _c = _b[0],
+      model = _b[1];
+
+  var _d = _react.default.useState([]),
+      cardsAdded = _d[0],
+      setCardsAdded = _d[1];
+
+  _react.default.useEffect(function () {
+    model.subscribeToEffect("ADD_CARD", function (data) {
+      if (data.pile !== name) return;
+      setCardsAdded(function (prev) {
+        return __spreadArrays(prev, [data.card.name]);
+      });
+    });
+  }, []);
+
+  return _react.default.createElement(CardPileWrapper, null, _react.default.createElement(AddedCardsWrapper, null, cardsAdded.map(function (card, i) {
+    return _react.default.createElement(_FadeAwayValue.default, {
+      key: i,
+      duration: 1.5
+    }, _react.default.createElement(AddedCardText, null, "+1 " + (0, _lodash.capitalize)(card)));
+  })), _react.default.createElement(PileTitle, null, (0, _lodash.capitalize)(name), " Pile: ", cards.length), _react.default.createElement(Pile, null, cards.map(function (card, i) {
     return _react.default.createElement(AnimatedCardWrapper, {
       key: card.id,
       layoutId: "" + card.id,
@@ -64978,13 +66911,21 @@ var CardPile = function CardPile(_a) {
   })));
 };
 
-var CardPileWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject([""], [""])));
+var CardPileWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  position: relative;\n"], ["\n  position: relative;\n"])));
 
-var AnimatedCardWrapper = (0, _styledComponents.default)(_framerMotion.motion.div)(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  position: absolute;\n  bottom: 0;\n"], ["\n  position: absolute;\n  bottom: 0;\n"])));
+var AddedCardsWrapper = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  position: absolute;\n  top: -100px;\n  left: 20px;\n"], ["\n  position: absolute;\n  top: -100px;\n  left: 20px;\n"])));
+
+var AddedCardText = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  color: plum;\n  display: inline-block;\n  white-space: nowrap;\n"], ["\n  color: plum;\n  display: inline-block;\n  white-space: nowrap;\n"])));
+
+var Pile = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  position: relative;\n"], ["\n  position: relative;\n"])));
+
+var PileTitle = _styledComponents.default.div(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n  color: #333;\n  padding: 10px;\n  border-radius: 4px 4px 0 0;\n  border-bottom: 2px solid rgba(0, 0, 0, 0.15);\n  background: white;\n"], ["\n  color: #333;\n  padding: 10px;\n  border-radius: 4px 4px 0 0;\n  border-bottom: 2px solid rgba(0, 0, 0, 0.15);\n  background: white;\n"])));
+
+var AnimatedCardWrapper = (0, _styledComponents.default)(_framerMotion.motion.div)(templateObject_6 || (templateObject_6 = __makeTemplateObject(["\n  position: absolute;\n  bottom: 0;\n"], ["\n  position: absolute;\n  bottom: 0;\n"])));
 var _default = CardPile;
 exports.default = _default;
-var templateObject_1, templateObject_2;
-},{"lodash":"../node_modules/lodash/lodash.js","react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","../ui/PaperCard":"components/ui/PaperCard.tsx"}],"components/fight/FightStageFooter.tsx":[function(require,module,exports) {
+var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5, templateObject_6;
+},{"lodash":"../node_modules/lodash/lodash.js","react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/PaperCard":"components/ui/PaperCard.tsx","~/components/ui/FadeAwayValue":"components/ui/FadeAwayValue.tsx"}],"components/fight/FightStageFooter.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -64995,6 +66936,8 @@ exports.default = void 0;
 var React = _interopRequireWildcard(require("react"));
 
 var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FightContext = require("~/fight/FightContext");
 
 var _CardPile = _interopRequireDefault(require("./CardPile"));
 
@@ -65016,30 +66959,41 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var FightStageFooter = function FightStageFooter(_a) {
-  var fightState = _a.fightState,
-      endTurn = _a.endTurn;
-  return React.createElement(Wrapper, null, React.createElement("div", null, React.createElement(EnergyCount, null, fightState.player.energy, " / ", fightState.player.player.energy), React.createElement(_CardPile.default, {
+var FightStageFooter = function FightStageFooter() {
+  var _a = (0, _FightContext.useFight)(),
+      state = _a[0],
+      model = _a[1];
+
+  var endTurn = function endTurn() {
+    model.affect("END_TURN", {});
+    model.run();
+  };
+
+  return React.createElement(Wrapper, null, React.createElement(Section, null, React.createElement(EnergyCount, null, state.player.energy, " / ", state.player.player.energy), React.createElement(_CardPile.default, {
     name: "draw",
-    cards: fightState.player.cards.draw
-  })), React.createElement("div", null, React.createElement(EndTurnButton, {
+    cards: state.player.cards.draw
+  })), React.createElement(Section, null, React.createElement(EndTurnButton, {
     onClick: endTurn
   }, "End Turn"), React.createElement(_CardPile.default, {
     name: "discard",
-    cards: fightState.player.cards.discard
+    cards: state.player.cards.discard
   })));
 };
 
 var Wrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-end;\n"], ["\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-end;\n"])));
 
-var EnergyCount = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin-top: 16px;\n  margin-bottom: 16px;\n  color: black;\n  font-size: 1.75rem;\n  font-weight: bold;\n  width: 80px;\n  height: 80px;\n  border-radius: 100%;\n  background: gold;\n"], ["\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin-top: 16px;\n  margin-bottom: 16px;\n  color: black;\n  font-size: 1.75rem;\n  font-weight: bold;\n  width: 80px;\n  height: 80px;\n  border-radius: 100%;\n  background: gold;\n"])));
+var Section = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  position: relative;\n"], ["\n  position: relative;\n"])));
 
-var EndTurnButton = _styledComponents.default.button(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: block;\n  font-size: 1.2em;\n  font-weight: bold;\n  font-family: Philosopher, serif;\n  text-transform: uppercase;\n  padding: 16px;\n  border: none;\n  appearance: none;\n  background-color: tomato;\n  border-radius: 4px;\n  margin-bottom: 16px;\n  cursor: pointer;\n"], ["\n  display: block;\n  font-size: 1.2em;\n  font-weight: bold;\n  font-family: Philosopher, serif;\n  text-transform: uppercase;\n  padding: 16px;\n  border: none;\n  appearance: none;\n  background-color: tomato;\n  border-radius: 4px;\n  margin-bottom: 16px;\n  cursor: pointer;\n"])));
+var EnergyCount = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin-top: 16px;\n  margin-bottom: 16px;\n  color: black;\n  font-size: 1.75rem;\n  font-weight: bold;\n  width: 80px;\n  height: 80px;\n  border-radius: 100%;\n  background: gold;\n  box-shadow: 0 0 16px gold;\n"], ["\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin-top: 16px;\n  margin-bottom: 16px;\n  color: black;\n  font-size: 1.75rem;\n  font-weight: bold;\n  width: 80px;\n  height: 80px;\n  border-radius: 100%;\n  background: gold;\n  box-shadow: 0 0 16px gold;\n"])));
+
+var EndTurnButton = _styledComponents.default.button(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  display: block;\n  font-size: 1.2em;\n  font-weight: bold;\n  font-family: Philosopher, serif;\n  text-transform: uppercase;\n  padding: 16px;\n  border: none;\n  border-bottom: 2px solid rgba(0, 0, 0, 0.15);\n  appearance: none;\n  background-color: tomato;\n  border-radius: 4px;\n  margin-bottom: 16px;\n  cursor: pointer;\n"], ["\n  display: block;\n  font-size: 1.2em;\n  font-weight: bold;\n  font-family: Philosopher, serif;\n  text-transform: uppercase;\n  padding: 16px;\n  border: none;\n  border-bottom: 2px solid rgba(0, 0, 0, 0.15);\n  appearance: none;\n  background-color: tomato;\n  border-radius: 4px;\n  margin-bottom: 16px;\n  cursor: pointer;\n"])));
 
 var _default = FightStageFooter;
 exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./CardPile":"components/fight/CardPile.tsx"}],"components/ui/VerticalBar.tsx":[function(require,module,exports) {
+var templateObject_1, templateObject_2, templateObject_3, templateObject_4;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","./CardPile":"components/fight/CardPile.tsx"}],"assets/player.png":[function(require,module,exports) {
+module.exports = "/player.1beceb5b.png";
+},{}],"components/ui/VerticalBar.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65050,6 +67004,8 @@ exports.default = void 0;
 var React = _interopRequireWildcard(require("react"));
 
 var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FadeAwayValue = _interopRequireDefault(require("./FadeAwayValue"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -65069,37 +67025,35 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-function usePrevious(value) {
-  var ref = React.useRef();
-  React.useEffect(function () {
-    ref.current = value;
-  });
-  return ref.current;
-}
-
 var VerticalBar = function VerticalBar(_a) {
   var label = _a.label,
       value = _a.value,
       total = _a.total,
-      color = _a.color; // TODO: Add logic to display "deltas"
-  // const previousValue = usePrevious(value);
-  // React.useEffect(() => {
-  // }, [value]);
-
-  return React.createElement(VerticalBarWrapper, null, React.createElement(BarTrack, null, React.createElement(BarValue, {
+      color = _a.color,
+      _b = _a.deltas,
+      deltas = _b === void 0 ? [] : _b;
+  return React.createElement(VerticalBarWrapper, null, deltas.filter(function (delta) {
+    return delta !== 0;
+  }).map(function (delta, i) {
+    return React.createElement(_FadeAwayValue.default, {
+      key: i
+    }, React.createElement(DeltaValue, {
+      positive: delta > 0
+    }, delta));
+  }), React.createElement(BarTrack, null, React.createElement(BarValue, {
     value: value,
     total: total,
     color: color
   })), React.createElement(Value, null, value, " / ", total), React.createElement(Label, null, label));
 };
 
-var VerticalBarWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n"], ["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n"])));
+var VerticalBarWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n  position: relative;\n"], ["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n  position: relative;\n"])));
 
 var Label = _styledComponents.default.span(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: block;\n  font-weight: bold;\n  text-align: center;\n  margin-top: 8px;\n  margin-bottom: 8px;\n"], ["\n  display: block;\n  font-weight: bold;\n  text-align: center;\n  margin-top: 8px;\n  margin-bottom: 8px;\n"])));
 
 var Value = _styledComponents.default.span(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: block;\n  text-align: center;\n  font-size: 0.85em;\n  margin-top: 4px;\n  margin-bottom: 4px;\n"], ["\n  display: block;\n  text-align: center;\n  font-size: 0.85em;\n  margin-top: 4px;\n  margin-bottom: 4px;\n"])));
 
-var BarTrack = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  position: relative;\n  width: 20px;\n  height: 200px;\n  background: rgba(255, 255, 255, 0.15);\n  /* box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3); */\n  border-radius: 20px;\n  overflow: hidden;\n"], ["\n  position: relative;\n  width: 20px;\n  height: 200px;\n  background: rgba(255, 255, 255, 0.15);\n  /* box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3); */\n  border-radius: 20px;\n  overflow: hidden;\n"])));
+var BarTrack = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  position: relative;\n  width: 20px;\n  height: 200px;\n  background: rgba(255, 255, 255, 0.15);\n  border-radius: 20px;\n  overflow: hidden;\n"], ["\n  position: relative;\n  width: 20px;\n  height: 200px;\n  background: rgba(255, 255, 255, 0.15);\n  border-radius: 20px;\n  overflow: hidden;\n"])));
 
 var BarValue = _styledComponents.default.div(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n  position: absolute;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  height: ", "%;\n  background-color: ", ";\n  transition: height 150ms ease-out;\n"], ["\n  position: absolute;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  height: ", "%;\n  background-color: ", ";\n  transition: height 150ms ease-out;\n"])), function (props) {
   return Math.min(props.value / props.total * 100, 100);
@@ -65107,10 +67061,14 @@ var BarValue = _styledComponents.default.div(templateObject_5 || (templateObject
   return props.color;
 });
 
+var DeltaValue = _styledComponents.default.div(templateObject_6 || (templateObject_6 = __makeTemplateObject(["\n  font-size: 2em;\n  font-weight: bold;\n  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);\n  color: ", ";\n  z-index: 100;\n"], ["\n  font-size: 2em;\n  font-weight: bold;\n  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);\n  color: ", ";\n  z-index: 100;\n"])), function (props) {
+  return props.positive ? "gold" : "red";
+});
+
 var _default = VerticalBar;
 exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js"}],"components/fight/ResourceBars.tsx":[function(require,module,exports) {
+var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5, templateObject_6;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./FadeAwayValue":"components/ui/FadeAwayValue.tsx"}],"components/fight/ResourceBars.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65122,7 +67080,9 @@ var React = _interopRequireWildcard(require("react"));
 
 var _styledComponents = _interopRequireDefault(require("styled-components"));
 
-var _VerticalBar = _interopRequireDefault(require("../ui/VerticalBar"));
+var _FightContext = require("~/fight/FightContext");
+
+var _VerticalBar = _interopRequireDefault(require("~/components/ui/VerticalBar"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -65142,29 +67102,85 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
+
 var ResourceBars = function ResourceBars(_a) {
-  var _b = _a === void 0 ? {} : _a,
-      _c = _b.hp,
-      hp = _c === void 0 ? {
+  var target = _a.target,
+      _b = _a.hp,
+      hp = _b === void 0 ? {
     value: 100,
     total: 100
-  } : _c,
-      _d = _b.certainty,
-      certainty = _d === void 0 ? {
+  } : _b,
+      _c = _a.certainty,
+      certainty = _c === void 0 ? {
     value: 0,
     total: 100
-  } : _d;
+  } : _c;
 
+  var _d = (0, _FightContext.useFight)(),
+      _e = _d[0],
+      model = _d[1];
+
+  var _f = React.useState([]),
+      hpDeltas = _f[0],
+      setHpDeltas = _f[1];
+
+  var _g = React.useState([]),
+      certaintyDeltas = _g[0],
+      setCertaintyDeltas = _g[1];
+
+  React.useEffect(function () {
+    model.subscribeToEffect("DEAL_DAMAGE", function (data) {
+      if (data.target !== target) return;
+      setHpDeltas(function (deltas) {
+        return __spreadArrays(deltas, [-data.damage]);
+      });
+    });
+    model.subscribeToEffect("GAIN_CERTAINTY", function (data) {
+      if (data.target !== target) return;
+      setCertaintyDeltas(function (deltas) {
+        return __spreadArrays(deltas, [data.certainty]);
+      });
+    }); // Listening to the individual "SET_ATTRIBUTES" is more accurate, but
+    // unfortunately shows things like "CLEAR_CERTAINTY", which happens every turn.
+    // model.subscribeToAction("SET_ATTRIBUTE", (data, state) => {
+    //   if (data.target !== target) return;
+    //   const currentValue = state[target].attributes[data.attribute];
+    //   const newDelta = data.value - currentValue;
+    //   switch (data.attribute) {
+    //     case "hp":
+    //       setHpDeltas((deltas) => [...deltas, newDelta]);
+    //       break;
+    //     case "certainty":
+    //       setCertaintyDeltas((deltas) => [...deltas, newDelta]);
+    //       break;
+    //   }
+    // });
+  }, []);
   return React.createElement(ResourceBarsWrapper, null, React.createElement(_VerticalBar.default, {
     label: "Resolve",
     value: hp.value,
     total: hp.total,
-    color: "crimson"
+    color: "crimson",
+    deltas: hpDeltas
   }), React.createElement(_VerticalBar.default, {
     label: "Certainty",
     value: certainty.value,
-    total: certainty.total,
-    color: "dodgerblue"
+    total: 100,
+    color: "dodgerblue",
+    deltas: certaintyDeltas
   }));
 };
 
@@ -65173,9 +67189,7 @@ var ResourceBarsWrapper = _styledComponents.default.div(templateObject_1 || (tem
 var _default = ResourceBars;
 exports.default = _default;
 var templateObject_1;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","../ui/VerticalBar":"components/ui/VerticalBar.tsx"}],"assets/player.png":[function(require,module,exports) {
-module.exports = "/player.1beceb5b.png";
-},{}],"components/fight/PlayerStage.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/VerticalBar":"components/ui/VerticalBar.tsx"}],"components/fight/PlayerStage.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65187,9 +67201,11 @@ var React = _interopRequireWildcard(require("react"));
 
 var _styledComponents = _interopRequireDefault(require("styled-components"));
 
-var _ResourceBars = _interopRequireDefault(require("./ResourceBars"));
+var _FightContext = require("~/fight/FightContext");
 
 var _player = _interopRequireDefault(require("~/assets/player.png"));
+
+var _ResourceBars = _interopRequireDefault(require("./ResourceBars"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -65209,16 +67225,17 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var PlayerStage = function PlayerStage(_a) {
-  var playerFightState = _a.playerFightState;
+var PlayerStage = function PlayerStage() {
+  var player = (0, _FightContext.useFight)()[0].player;
   return React.createElement("div", null, React.createElement("h2", null, "Player"), React.createElement(StageWrapper, null, React.createElement(_ResourceBars.default, {
+    target: "player",
     hp: {
-      value: playerFightState.attributes.hp,
-      total: playerFightState.player.baseAttributes.hp
+      value: player.attributes.hp,
+      total: player.player.baseAttributes.hp
     },
     certainty: {
-      value: playerFightState.attributes.certainty,
-      total: playerFightState.player.baseAttributes.certainty
+      value: player.attributes.certainty,
+      total: player.player.baseAttributes.certainty
     }
   }), React.createElement(PlayerFigure, null)));
 };
@@ -65232,7 +67249,7 @@ var PlayerFigure = _styledComponents.default.img.attrs({
 var _default = PlayerStage;
 exports.default = _default;
 var templateObject_1, templateObject_2;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./ResourceBars":"components/fight/ResourceBars.tsx","~/assets/player.png":"assets/player.png"}],"assets/descartes.png":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/assets/player.png":"assets/player.png","./ResourceBars":"components/fight/ResourceBars.tsx"}],"assets/descartes.png":[function(require,module,exports) {
 module.exports = "/descartes.8bcf3031.png";
 },{}],"components/fight/EnemyStage.tsx":[function(require,module,exports) {
 "use strict";
@@ -65246,9 +67263,11 @@ var React = _interopRequireWildcard(require("react"));
 
 var _styledComponents = _interopRequireDefault(require("styled-components"));
 
-var _ResourceBars = _interopRequireDefault(require("./ResourceBars"));
+var _FightContext = require("~/fight/FightContext");
 
 var _descartes = _interopRequireDefault(require("~/assets/descartes.png"));
+
+var _ResourceBars = _interopRequireDefault(require("./ResourceBars"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -65268,16 +67287,50 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var EnemyStage = function EnemyStage(_a) {
-  var enemyFightState = _a.enemyFightState;
-  return React.createElement("div", null, React.createElement(Title, null, "Descartes"), React.createElement(StageWrapper, null, React.createElement(EnemyFigure, null), React.createElement(_ResourceBars.default, {
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
+
+var EnemyStage = function EnemyStage() {
+  var _a = React.useState([]),
+      played = _a[0],
+      setPlayed = _a[1];
+
+  var _b = (0, _FightContext.useFight)(),
+      enemy = _b[0].enemy,
+      model = _b[1];
+
+  React.useEffect(function () {
+    model.subscribeToEffect("RUN_MECHANIC", function (data) {
+      setPlayed(function (prev) {
+        return __spreadArrays(prev, [data.mechanic]);
+      });
+    });
+  }, []);
+  return React.createElement("div", null, React.createElement(Title, null, "Descartes"), React.createElement(StageWrapper, null, React.createElement("div", null, React.createElement(EnemyFigure, null), enemy.stance ? React.createElement("p", null, "Stance: ", enemy.stance.name) : null, React.createElement("ol", null, played.map(function (mechanic, i) {
+    return React.createElement("li", {
+      key: i,
+      title: JSON.stringify(mechanic.effects)
+    }, mechanic.name);
+  }))), React.createElement(_ResourceBars.default, {
+    target: "enemy",
     hp: {
-      value: enemyFightState.attributes.hp,
-      total: enemyFightState.enemy.baseAttributes.hp
+      value: enemy.attributes.hp,
+      total: enemy.enemy.baseAttributes.hp
     },
     certainty: {
-      value: enemyFightState.attributes.certainty,
-      total: enemyFightState.enemy.baseAttributes.certainty
+      value: enemy.attributes.certainty,
+      total: enemy.enemy.baseAttributes.certainty
     }
   })));
 };
@@ -65293,7 +67346,7 @@ var EnemyFigure = _styledComponents.default.img.attrs({
 var _default = EnemyStage;
 exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./ResourceBars":"components/fight/ResourceBars.tsx","~/assets/descartes.png":"assets/descartes.png"}],"components/ui/CardEffectsText.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/assets/descartes.png":"assets/descartes.png","./ResourceBars":"components/fight/ResourceBars.tsx"}],"components/ui/CardEffectsText.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65334,6 +67387,11 @@ var CardEffectsText = function CardEffectsText(_a) {
           key: i
         }, "Gain ", _react.default.createElement(CardHighlightedText, null, cardEffect.data.certainty, " certainty"));
 
+      case "EXHAUST_CARD":
+        return _react.default.createElement(EffectText, {
+          key: i
+        }, _react.default.createElement(CardHighlightedText, null, "Exhaust"));
+
       default:
         return _react.default.createElement(EffectText, {
           key: i
@@ -65353,73 +67411,7 @@ var CardHighlightedText = _styledComponents.default.span(templateObject_3 || (te
 var _default = CardEffectsText;
 exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js"}],"game/utils.ts":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.drawCards = exports.cardIsPlayable = void 0;
-
-var _lodash = require("lodash");
-
-var __assign = void 0 && (void 0).__assign || function () {
-  __assign = Object.assign || function (t) {
-    for (var s, i = 1, n = arguments.length; i < n; i++) {
-      s = arguments[i];
-
-      for (var p in s) {
-        if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
-      }
-    }
-
-    return t;
-  };
-
-  return __assign.apply(this, arguments);
-};
-
-var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
-  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
-    s += arguments[i].length;
-  }
-
-  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
-    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
-      r[k] = a[j];
-    }
-  }
-
-  return r;
-};
-
-var cardIsPlayable = function cardIsPlayable(playerFightState, card) {
-  return playerFightState.energy >= card.cost;
-};
-
-exports.cardIsPlayable = cardIsPlayable;
-
-var drawCards = function drawCards(fightState, nCards, options) {
-  var nextState = (options === null || options === void 0 ? void 0 : options.mutate) ? fightState : __assign({}, fightState);
-  var cards = [];
-
-  while (cards.length < nCards) {
-    var card = nextState.player.drawPile.shift();
-
-    if (card) {
-      cards.push(card);
-    } else {
-      nextState.player.drawPile = (0, _lodash.shuffle)(__spreadArrays(nextState.player.discardPile));
-      nextState.player.discardPile = [];
-    }
-  }
-
-  nextState.player.hand = __spreadArrays(nextState.player.hand, cards);
-  return nextState;
-};
-
-exports.drawCards = drawCards;
-},{"lodash":"../node_modules/lodash/lodash.js"}],"components/fight/HandStage.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js"}],"components/fight/HandStage.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65433,11 +67425,11 @@ var _styledComponents = _interopRequireDefault(require("styled-components"));
 
 var _framerMotion = require("framer-motion");
 
+var _FightContext = require("~/fight/FightContext");
+
 var _PaperCard = _interopRequireDefault(require("../ui/PaperCard"));
 
 var _CardEffectsText = _interopRequireDefault(require("../ui/CardEffectsText"));
-
-var _utils = require("../../game/utils");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -65457,14 +67449,24 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var HandStage = function HandStage(_a) {
-  var playerFightState = _a.playerFightState,
-      playCard = _a.playCard;
-  var hand = playerFightState.cards.hand;
+var HandStage = function HandStage() {
+  var _a = (0, _FightContext.useFight)(),
+      player = _a[0].player,
+      model = _a[1];
+
+  var hand = player.cards.hand;
+
+  var playCard = function playCard(card) {
+    model.affect("PLAY_CARD", {
+      card: card
+    });
+    model.run();
+  };
+
   return React.createElement(HandStageWrapper, null, hand.map(function (card, i) {
     // TODO: Figure out why I need `0.5` (I just added it, and it maginally works).
     var normalizedIndex = i - hand.length + hand.length / 2 + 0.5;
-    var isPlayable = (0, _utils.cardIsPlayable)(playerFightState, card);
+    var isPlayable = player.energy >= card.cost;
     return React.createElement(AnimatedCardWrapper, {
       key: card.id,
       layoutId: "" + card.id,
@@ -65507,13 +67509,13 @@ var HandStage = function HandStage(_a) {
   }));
 };
 
-var HandStageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  justify-content: center;\n  flex: 0;\n  position: relative;\n  margin-left: 16px;\n"], ["\n  display: flex;\n  justify-content: center;\n  flex: 0;\n  position: relative;\n  margin-left: 16px;\n"])));
+var HandStageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  justify-content: center;\n  flex: 0;\n  position: absolute;\n  bottom: 100px;\n  left: 50%;\n  transform: translateX(-50%);\n"], ["\n  display: flex;\n  justify-content: center;\n  flex: 0;\n  position: absolute;\n  bottom: 100px;\n  left: 50%;\n  transform: translateX(-50%);\n"])));
 
 var AnimatedCardWrapper = (0, _styledComponents.default)(_framerMotion.motion.div)(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  margin-right: -20px;\n  border-radius: 8px;\n  z-index: 0;\n\n  &:hover {\n    z-index: 1;\n  }\n"], ["\n  margin-right: -20px;\n  border-radius: 8px;\n  z-index: 0;\n\n  &:hover {\n    z-index: 1;\n  }\n"])));
 var _default = HandStage;
 exports.default = _default;
 var templateObject_1, templateObject_2;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","../ui/PaperCard":"components/ui/PaperCard.tsx","../ui/CardEffectsText":"components/ui/CardEffectsText.tsx","../../game/utils":"game/utils.ts"}],"components/ui/Modal.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","~/fight/FightContext":"fight/FightContext.tsx","../ui/PaperCard":"components/ui/PaperCard.tsx","../ui/CardEffectsText":"components/ui/CardEffectsText.tsx"}],"components/ui/Modal.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65666,9 +67668,13 @@ var _framerMotion = require("framer-motion");
 
 var _ModelProvider = require("~/logic/ModelProvider");
 
-var _fight = require("~/game/fight");
+var _FightModel = require("~/fight/FightModel");
 
-var _cards = require("~/game/cards");
+var _FightContext = _interopRequireDefault(require("~/fight/FightContext"));
+
+var _default2 = require("~/game/player/default");
+
+var _descartes = require("~/game/ai/descartes");
 
 var _FightStageHeader = _interopRequireDefault(require("./FightStageHeader"));
 
@@ -65702,65 +67708,40 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var fight = (0, _fight.initFight)((0, _cards.startingDeck)());
+var fight = (0, _FightModel.initFight)((0, _default2.defaultPlayer)(), (0, _descartes.createDescartes)());
 
 var FightStage = function FightStage() {
   var _a = (0, _ModelProvider.useModel)(fight),
       state = _a[0],
-      _b = _a[1],
-      affect = _b.affect,
-      run = _b.run;
+      model = _a[1];
 
   React.useEffect(function () {
-    affect("START_FIGHT", {});
-    run();
+    model.affect("START_FIGHT", {});
+    model.run();
   }, []);
   var victory = state.enemy.attributes.hp <= 0;
   var defeat = state.player.attributes.hp <= 0;
-
-  var playCard = function playCard(card) {
-    affect("PLAY_CARD", {
-      card: card
-    });
-    run();
-  };
-
-  var endTurn = function endTurn() {
-    affect("END_TURN", {});
-    run();
-  };
-
-  return React.createElement(_framerMotion.AnimateSharedLayout, null, React.createElement(FightStageWrapper, null, React.createElement(FightStageHeaderWrapper, null, React.createElement(_FightStageHeader.default, {
-    fightState: state
-  })), React.createElement(FightStageContentWrapper, null, React.createElement(_PlayerStage.default, {
-    playerFightState: state.player
-  }), React.createElement(_EnemyStage.default, {
-    enemyFightState: state.enemy
-  })), React.createElement(_HandStage.default, {
-    playerFightState: state.player,
-    playCard: playCard
-  }), React.createElement(FightStageFooterWrapper, null, React.createElement(_FightStageFooter.default, {
-    fightState: state,
-    endTurn: endTurn
-  })), React.createElement(_VictoryModal.default, {
+  return React.createElement(_FightContext.default.Provider, {
+    value: [state, model]
+  }, React.createElement(_framerMotion.AnimateSharedLayout, null, React.createElement(FightStageWrapper, null, React.createElement(FightStageHeaderWrapper, null, React.createElement(_FightStageHeader.default, null)), React.createElement(FightStageContentWrapper, null, React.createElement(_PlayerStage.default, null), React.createElement(_EnemyStage.default, null)), React.createElement(_HandStage.default, null), React.createElement(FightStageFooterWrapper, null, React.createElement(_FightStageFooter.default, null)), React.createElement(_VictoryModal.default, {
     open: victory
   }), React.createElement(_DefeatModal.default, {
     open: defeat
-  })));
+  }))));
 };
 
-var FightStageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  padding: 32px;\n  display: flex;\n  flex-direction: column;\n  height: calc(100vh - 64px);\n"], ["\n  padding: 32px;\n  display: flex;\n  flex-direction: column;\n  height: calc(100vh - 64px);\n"])));
+var FightStageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  padding: 32px;\n  padding-bottom: 0;\n  display: flex;\n  flex-direction: column;\n  height: calc(100vh - 32px);\n"], ["\n  padding: 32px;\n  padding-bottom: 0;\n  display: flex;\n  flex-direction: column;\n  height: calc(100vh - 32px);\n"])));
 
 var FightStageHeaderWrapper = _styledComponents.default.header(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  flex: 0;\n"], ["\n  flex: 0;\n"])));
 
 var FightStageContentWrapper = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  flex: 1;\n  display: flex;\n  justify-content: space-between;\n"], ["\n  flex: 1;\n  display: flex;\n  justify-content: space-between;\n"])));
 
-var FightStageFooterWrapper = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  flex: 0;\n"], ["\n  flex: 0;\n"])));
+var FightStageFooterWrapper = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  flex: 0;\n  z-index: 1;\n"], ["\n  flex: 0;\n  z-index: 1;\n"])));
 
 var _default = FightStage;
 exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3, templateObject_4;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","~/logic/ModelProvider":"logic/ModelProvider.tsx","~/game/fight":"game/fight.ts","~/game/cards":"game/cards.ts","./FightStageHeader":"components/fight/FightStageHeader.tsx","./FightStageFooter":"components/fight/FightStageFooter.tsx","./PlayerStage":"components/fight/PlayerStage.tsx","./EnemyStage":"components/fight/EnemyStage.tsx","./HandStage":"components/fight/HandStage.tsx","./VictoryModal":"components/fight/VictoryModal.tsx","./DefeatModal":"components/fight/DefeatModal.tsx"}],"components/App.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","~/logic/ModelProvider":"logic/ModelProvider.tsx","~/fight/FightModel":"fight/FightModel.ts","~/fight/FightContext":"fight/FightContext.tsx","~/game/player/default":"game/player/default.ts","~/game/ai/descartes":"game/ai/descartes/index.ts","./FightStageHeader":"components/fight/FightStageHeader.tsx","./FightStageFooter":"components/fight/FightStageFooter.tsx","./PlayerStage":"components/fight/PlayerStage.tsx","./EnemyStage":"components/fight/EnemyStage.tsx","./HandStage":"components/fight/HandStage.tsx","./VictoryModal":"components/fight/VictoryModal.tsx","./DefeatModal":"components/fight/DefeatModal.tsx"}],"components/App.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65883,7 +67864,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59845" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59975" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
