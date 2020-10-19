@@ -66969,7 +66969,7 @@ var FightStageHeader = function FightStageHeader() {
   return React.createElement(Wrapper, null, turn ? React.createElement(TurnText, null, "Turn ", turn) : null);
 };
 
-var Wrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
+var Wrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  position: fixed;\n  display: flex;\n  justify-content: center;\n  width: 100%;\n"], ["\n  position: fixed;\n  display: flex;\n  justify-content: center;\n  width: 100%;\n"])));
 
 var TurnText = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  background: rgba(0, 0, 0, 0.66);\n  padding: 10px;\n  border-radius: 4px;\n"], ["\n  background: rgba(0, 0, 0, 0.66);\n  padding: 10px;\n  border-radius: 4px;\n"])));
 
@@ -67295,196 +67295,7 @@ exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3, templateObject_4;
 },{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","./CardPile":"components/fight/CardPile.tsx"}],"assets/player.png":[function(require,module,exports) {
 module.exports = "/player.1beceb5b.png";
-},{}],"components/ui/VerticalBar.tsx":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var React = _interopRequireWildcard(require("react"));
-
-var _styledComponents = _interopRequireDefault(require("styled-components"));
-
-var _FadeAwayValue = _interopRequireDefault(require("./FadeAwayValue"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
-
-var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
-  if (Object.defineProperty) {
-    Object.defineProperty(cooked, "raw", {
-      value: raw
-    });
-  } else {
-    cooked.raw = raw;
-  }
-
-  return cooked;
-};
-
-var VerticalBar = function VerticalBar(_a) {
-  var label = _a.label,
-      value = _a.value,
-      total = _a.total,
-      color = _a.color,
-      _b = _a.deltas,
-      deltas = _b === void 0 ? [] : _b;
-  return React.createElement(VerticalBarWrapper, null, deltas.filter(function (delta) {
-    return delta !== 0;
-  }).map(function (delta, i) {
-    return React.createElement(_FadeAwayValue.default, {
-      key: i
-    }, React.createElement(DeltaValue, {
-      positive: delta > 0
-    }, delta));
-  }), React.createElement(BarTrack, null, React.createElement(BarValue, {
-    value: value,
-    total: total,
-    color: color
-  })), React.createElement(Value, null, value, " / ", total), React.createElement(Label, null, label));
-};
-
-var VerticalBarWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n  position: relative;\n"], ["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n  position: relative;\n"])));
-
-var Label = _styledComponents.default.span(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: block;\n  font-weight: bold;\n  text-align: center;\n  margin-top: 8px;\n  margin-bottom: 8px;\n"], ["\n  display: block;\n  font-weight: bold;\n  text-align: center;\n  margin-top: 8px;\n  margin-bottom: 8px;\n"])));
-
-var Value = _styledComponents.default.span(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: block;\n  text-align: center;\n  font-size: 0.85em;\n  margin-top: 4px;\n  margin-bottom: 4px;\n"], ["\n  display: block;\n  text-align: center;\n  font-size: 0.85em;\n  margin-top: 4px;\n  margin-bottom: 4px;\n"])));
-
-var BarTrack = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  position: relative;\n  width: 20px;\n  height: 200px;\n  background: rgba(255, 255, 255, 0.15);\n  border-radius: 20px;\n  overflow: hidden;\n"], ["\n  position: relative;\n  width: 20px;\n  height: 200px;\n  background: rgba(255, 255, 255, 0.15);\n  border-radius: 20px;\n  overflow: hidden;\n"])));
-
-var BarValue = _styledComponents.default.div(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n  position: absolute;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  height: ", "%;\n  background-color: ", ";\n  transition: height 150ms ease-out;\n"], ["\n  position: absolute;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  height: ", "%;\n  background-color: ", ";\n  transition: height 150ms ease-out;\n"])), function (props) {
-  return Math.min(props.value / props.total * 100, 100);
-}, function (props) {
-  return props.color;
-});
-
-var DeltaValue = _styledComponents.default.div(templateObject_6 || (templateObject_6 = __makeTemplateObject(["\n  font-size: 2em;\n  font-weight: bold;\n  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);\n  color: ", ";\n  z-index: 100;\n"], ["\n  font-size: 2em;\n  font-weight: bold;\n  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);\n  color: ", ";\n  z-index: 100;\n"])), function (props) {
-  return props.positive ? "gold" : "red";
-});
-
-var _default = VerticalBar;
-exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5, templateObject_6;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./FadeAwayValue":"components/ui/FadeAwayValue.tsx"}],"components/fight/ResourceBars.tsx":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var React = _interopRequireWildcard(require("react"));
-
-var _styledComponents = _interopRequireDefault(require("styled-components"));
-
-var _FightContext = require("~/fight/FightContext");
-
-var _VerticalBar = _interopRequireDefault(require("~/components/ui/VerticalBar"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
-
-var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
-  if (Object.defineProperty) {
-    Object.defineProperty(cooked, "raw", {
-      value: raw
-    });
-  } else {
-    cooked.raw = raw;
-  }
-
-  return cooked;
-};
-
-var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
-  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
-    s += arguments[i].length;
-  }
-
-  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
-    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
-      r[k] = a[j];
-    }
-  }
-
-  return r;
-};
-
-var ResourceBars = function ResourceBars(_a) {
-  var target = _a.target,
-      _b = _a.hp,
-      hp = _b === void 0 ? {
-    value: 100,
-    total: 100
-  } : _b,
-      _c = _a.certainty,
-      certainty = _c === void 0 ? {
-    value: 0,
-    total: 100
-  } : _c;
-
-  var _d = (0, _FightContext.useFight)(),
-      _e = _d[0],
-      model = _d[1];
-
-  var _f = React.useState([]),
-      hpDeltas = _f[0],
-      setHpDeltas = _f[1];
-
-  var _g = React.useState([]),
-      certaintyDeltas = _g[0],
-      setCertaintyDeltas = _g[1];
-
-  React.useEffect(function () {
-    model.subscribeToAction("SET_ATTRIBUTE", function (data, state) {
-      if (data.target !== target || data.silent) return;
-      var currentValue = state[target].attributes[data.attribute];
-      var newDelta = data.value - currentValue;
-
-      switch (data.attribute) {
-        case "hp":
-          setHpDeltas(function (deltas) {
-            return __spreadArrays(deltas, [newDelta]);
-          });
-          break;
-
-        case "certainty":
-          setCertaintyDeltas(function (deltas) {
-            return __spreadArrays(deltas, [newDelta]);
-          });
-          break;
-      }
-    });
-  }, []);
-  return React.createElement(ResourceBarsWrapper, null, React.createElement(_VerticalBar.default, {
-    label: "Resolve",
-    value: hp.value,
-    total: hp.total,
-    color: "crimson",
-    deltas: hpDeltas
-  }), React.createElement(_VerticalBar.default, {
-    label: "Certainty",
-    value: certainty.value,
-    total: 100,
-    color: "dodgerblue",
-    deltas: certaintyDeltas
-  }));
-};
-
-var ResourceBarsWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
-
-var _default = ResourceBars;
-exports.default = _default;
-var templateObject_1;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/VerticalBar":"components/ui/VerticalBar.tsx"}],"../node_modules/prop-types/factoryWithTypeCheckers.js":[function(require,module,exports) {
+},{}],"../node_modules/prop-types/factoryWithTypeCheckers.js":[function(require,module,exports) {
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -70616,7 +70427,302 @@ var Tooltip = function Tooltip(_a) {
 
 var _default = Tooltip;
 exports.default = _default;
-},{"react":"../node_modules/react/index.js","react-tooltip":"../node_modules/react-tooltip/dist/index.es.js"}],"assets/virtue.png":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","react-tooltip":"../node_modules/react-tooltip/dist/index.es.js"}],"components/ui/HorizontalBar.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var React = _interopRequireWildcard(require("react"));
+
+var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FadeAwayValue = _interopRequireDefault(require("./FadeAwayValue"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
+  if (Object.defineProperty) {
+    Object.defineProperty(cooked, "raw", {
+      value: raw
+    });
+  } else {
+    cooked.raw = raw;
+  }
+
+  return cooked;
+};
+
+var HorizontalBar = function HorizontalBar(_a) {
+  var label = _a.label,
+      value = _a.value,
+      total = _a.total,
+      color = _a.color,
+      _b = _a.deltas,
+      deltas = _b === void 0 ? [] : _b;
+  return React.createElement(HorizontalBarWrapper, null, React.createElement(BarInfo, null, React.createElement(Label, null, label), React.createElement(Value, null, value, " / ", total)), React.createElement(BarTrack, null, React.createElement(BarValue, {
+    value: value,
+    total: total,
+    color: color
+  }), React.createElement(FadeAwayWrapper, {
+    value: value,
+    total: total
+  }, deltas.filter(function (delta) {
+    return delta !== 0;
+  }).map(function (delta, i) {
+    return React.createElement(_FadeAwayValue.default, {
+      key: i
+    }, React.createElement(DeltaValue, {
+      positive: delta > 0
+    }, delta));
+  }))));
+};
+
+var HorizontalBarWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n  position: relative;\n"], ["\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  margin: 8px;\n  position: relative;\n"])));
+
+var Label = _styledComponents.default.span(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: block;\n  font-weight: bold;\n  text-align: center;\n  margin-top: 8px;\n  margin-bottom: 8px;\n"], ["\n  display: block;\n  font-weight: bold;\n  text-align: center;\n  margin-top: 8px;\n  margin-bottom: 8px;\n"])));
+
+var Value = _styledComponents.default.span(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: block;\n  text-align: center;\n  font-size: 0.85em;\n  margin-top: 4px;\n  margin-bottom: 4px;\n"], ["\n  display: block;\n  text-align: center;\n  font-size: 0.85em;\n  margin-top: 4px;\n  margin-bottom: 4px;\n"])));
+
+var BarTrack = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  position: relative;\n  width: 200px;\n  height: 10px;\n  background: rgba(255, 255, 255, 0.15);\n  border-radius: 20px;\n"], ["\n  position: relative;\n  width: 200px;\n  height: 10px;\n  background: rgba(255, 255, 255, 0.15);\n  border-radius: 20px;\n"])));
+
+var BarValue = _styledComponents.default.div(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: 0;\n  width: ", "%;\n  background-color: ", ";\n  transition: width 150ms ease-out;\n  border-radius: 20px;\n"], ["\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: 0;\n  width: ", "%;\n  background-color: ", ";\n  transition: width 150ms ease-out;\n  border-radius: 20px;\n"])), function (props) {
+  return Math.min(props.value / props.total * 100, 100);
+}, function (props) {
+  return props.color;
+});
+
+var FadeAwayWrapper = _styledComponents.default.div(templateObject_6 || (templateObject_6 = __makeTemplateObject(["\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: ", "%;\n"], ["\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  left: ", "%;\n"])), function (props) {
+  return Math.min(props.value / props.total * 100, 100);
+});
+
+var BarInfo = _styledComponents.default.div(templateObject_7 || (templateObject_7 = __makeTemplateObject(["\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  width: 100%;\n"], ["\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  width: 100%;\n"])));
+
+var DeltaValue = _styledComponents.default.div(templateObject_8 || (templateObject_8 = __makeTemplateObject(["\n  font-size: 2em;\n  font-weight: bold;\n  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);\n  color: ", ";\n  z-index: 100;\n"], ["\n  font-size: 2em;\n  font-weight: bold;\n  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);\n  color: ", ";\n  z-index: 100;\n"])), function (props) {
+  return props.positive ? "gold" : "red";
+});
+
+var _default = HorizontalBar;
+exports.default = _default;
+var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5, templateObject_6, templateObject_7, templateObject_8;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./FadeAwayValue":"components/ui/FadeAwayValue.tsx"}],"components/fight/ResourceBars.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var React = _interopRequireWildcard(require("react"));
+
+var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FightContext = require("~/fight/FightContext");
+
+var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
+
+var _HorizontalBar = _interopRequireDefault(require("~/components/ui/HorizontalBar"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
+  if (Object.defineProperty) {
+    Object.defineProperty(cooked, "raw", {
+      value: raw
+    });
+  } else {
+    cooked.raw = raw;
+  }
+
+  return cooked;
+};
+
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
+
+var ResourceBars = function ResourceBars(_a) {
+  var target = _a.target,
+      _b = _a.hp,
+      hp = _b === void 0 ? {
+    value: 100,
+    total: 100
+  } : _b,
+      _c = _a.certainty,
+      certainty = _c === void 0 ? {
+    value: 0,
+    total: 100
+  } : _c;
+
+  var _d = (0, _FightContext.useFight)(),
+      _e = _d[0],
+      model = _d[1];
+
+  var _f = React.useState([]),
+      hpDeltas = _f[0],
+      setHpDeltas = _f[1];
+
+  var _g = React.useState([]),
+      certaintyDeltas = _g[0],
+      setCertaintyDeltas = _g[1];
+
+  React.useEffect(function () {
+    model.subscribeToAction("SET_ATTRIBUTE", function (data, state) {
+      if (data.target !== target || data.silent) return;
+      var currentValue = state[target].attributes[data.attribute];
+      var newDelta = data.value - currentValue;
+
+      switch (data.attribute) {
+        case "hp":
+          setHpDeltas(function (deltas) {
+            return __spreadArrays(deltas, [newDelta]);
+          });
+          break;
+
+        case "certainty":
+          setCertaintyDeltas(function (deltas) {
+            return __spreadArrays(deltas, [newDelta]);
+          });
+          break;
+      }
+    });
+  }, []);
+  var hpId = target + ":hp";
+  var certaintyId = target + ":certainty";
+  return React.createElement(ResourceBarsWrapper, null, React.createElement("div", {
+    "data-tip": true,
+    "data-for": hpId
+  }, React.createElement(_HorizontalBar.default, {
+    label: "Resolve",
+    value: hp.value,
+    total: hp.total,
+    color: "crimson",
+    deltas: hpDeltas
+  })), React.createElement(_Tooltip.default, {
+    id: hpId,
+    place: "bottom"
+  }, React.createElement(ResourceTitle, null, "Resolve"), React.createElement("p", null, "Win by breaking the opponent's resolve!"), React.createElement("p", null, "You die if your resolve reaches zero.")), React.createElement("div", {
+    "data-tip": true,
+    "data-for": certaintyId
+  }, React.createElement(_HorizontalBar.default, {
+    label: "Certainty",
+    value: certainty.value,
+    total: 100,
+    color: "dodgerblue",
+    deltas: certaintyDeltas
+  })), React.createElement(_Tooltip.default, {
+    id: certaintyId,
+    place: "bottom"
+  }, React.createElement(ResourceTitle, null, "Certainty"), React.createElement("p", null, "Certainty protects you from the opponent's attacks."), React.createElement("p", null, "Certainty is cleared at the beginning of every turn.")));
+};
+
+var ResourceBarsWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n"], ["\n  display: flex;\n  flex-direction: column;\n"])));
+
+var ResourceTitle = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  margin-bottom: 5px;\n"], ["\n  font-weight: bold;\n  margin-bottom: 5px;\n"])));
+
+var _default = ResourceBars;
+exports.default = _default;
+var templateObject_1, templateObject_2;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/components/ui/HorizontalBar":"components/ui/HorizontalBar.tsx"}],"components/ui/BuffIcon.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _react = _interopRequireDefault(require("react"));
+
+var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _framerMotion = require("framer-motion");
+
+var _Tooltip = _interopRequireDefault(require("./Tooltip"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
+  if (Object.defineProperty) {
+    Object.defineProperty(cooked, "raw", {
+      value: raw
+    });
+  } else {
+    cooked.raw = raw;
+  }
+
+  return cooked;
+};
+
+var BuffIcon = function BuffIcon(_a) {
+  var id = _a.id,
+      icon = _a.icon,
+      value = _a.value,
+      tooltipContent = _a.tooltipContent,
+      _b = _a.variant,
+      variant = _b === void 0 ? "circle" : _b;
+  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(BuffIconWrapper, {
+    "data-tip": true,
+    "data-for": id
+  }, variant === "circle" ? _react.default.createElement(CircleVariant, {
+    src: icon
+  }) : _react.default.createElement(ImgVariant, {
+    src: icon
+  }), value ? _react.default.createElement(BuffIconValue, null, value) : null), tooltipContent ? _react.default.createElement(_Tooltip.default, {
+    id: id,
+    place: "bottom"
+  }, tooltipContent) : null);
+};
+
+var BuffIconWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  position: relative;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n"], ["\n  position: relative;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n"])));
+
+var BuffIconValue = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  padding: 0 5px;\n  color: black;\n  font-weight: bold;\n  font-size: 0.85em;\n  border-radius: 100px;\n  background: gold;\n"], ["\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  padding: 0 5px;\n  color: black;\n  font-weight: bold;\n  font-size: 0.85em;\n  border-radius: 100px;\n  background: gold;\n"])));
+
+var ImgVariant = (0, _styledComponents.default)(_framerMotion.motion.img).attrs({
+  initial: {
+    scale: 0,
+    rotate: -45
+  },
+  animate: {
+    scale: 1,
+    rotate: 0
+  }
+})(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  width: 32px;\n  height: 32px;\n"], ["\n  width: 32px;\n  height: 32px;\n"])));
+var CircleVariant = (0, _styledComponents.default)(_framerMotion.motion.div).attrs({
+  initial: {
+    scale: 0,
+    rotate: -45
+  },
+  animate: {
+    scale: 1,
+    rotate: 0
+  }
+})(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n  background-image: url(", ");\n"], ["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n  background-image: url(", ");\n"])), function (props) {
+  return props.src;
+});
+var _default = BuffIcon;
+exports.default = _default;
+var templateObject_1, templateObject_2, templateObject_3, templateObject_4;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","./Tooltip":"components/ui/Tooltip.tsx"}],"assets/virtue.png":[function(require,module,exports) {
 module.exports = "/virtue.74dabebc.png";
 },{}],"components/ui/EffectsText.tsx":[function(require,module,exports) {
 "use strict";
@@ -70711,7 +70817,7 @@ var EFFECTS_TEXT_MAP = {
     var displayedDamage = showModifiers && isModified ? damage.modified : damage.base;
     return _react.default.createElement(EffectText, null, "Deal ", _react.default.createElement(HighlightedText, {
       modified: showModifiers && isModified
-    }, displayedDamage, " damage ", effect.data.times, " times"), target ? " to " + (effect.data.target === "enemy" ? state.enemy.enemy.name : "player") : null);
+    }, displayedDamage, " damage"), _react.default.createElement(HighlightedText, null, " " + effect.data.times + " times"), target ? " to " + (effect.data.target === "enemy" ? state.enemy.enemy.name : "player") : null);
   },
   GAIN_CERTAINTY: function GAIN_CERTAINTY(_a) {
     var effect = _a.effect,
@@ -70950,7 +71056,7 @@ var _styledComponents = _interopRequireDefault(require("styled-components"));
 
 var _FightContext = require("~/fight/FightContext");
 
-var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
+var _BuffIcon = _interopRequireDefault(require("~/components/ui/BuffIcon"));
 
 var _HooksText = _interopRequireDefault(require("~/components/ui/HooksText"));
 
@@ -70981,31 +71087,23 @@ var EntityStance = function EntityStance(_a) {
   if (!stance) return null;
   var id = target + ":" + stance.name;
   var icon = STANCE_ICONS.get(stance.name) || "";
-  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(_Tooltip.default, {
+  return _react.default.createElement(_BuffIcon.default, {
     id: id,
-    place: "bottom"
-  }, _react.default.createElement(StanceName, null, stance.name), _react.default.createElement(_HooksText.default, {
-    target: "enemy",
-    hooks: stance.hooks
-  })), _react.default.createElement(StanceIcon, {
-    "data-tip": true,
-    "data-for": id,
-    style: {
-      backgroundImage: "url(" + icon + ")"
-    }
-  }));
+    icon: icon,
+    variant: "circle",
+    tooltipContent: _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(StanceName, null, stance.name), _react.default.createElement(_HooksText.default, {
+      target: "enemy",
+      hooks: stance.hooks
+    }))
+  });
 };
 
-var MetaTitle = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  text-align: center;\n"], ["\n  text-align: center;\n"])));
-
-var StanceName = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
-
-var StanceIcon = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"], ["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"])));
+var StanceName = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
 
 var _default = EntityStance;
 exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/components/ui/HooksText":"components/ui/HooksText.tsx","~/assets/methodological-doubt.png":"assets/methodological-doubt.png","~/assets/clear-and-distinct.png":"assets/clear-and-distinct.png"}],"assets/cogito.png":[function(require,module,exports) {
+var templateObject_1;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/BuffIcon":"components/ui/BuffIcon.tsx","~/components/ui/HooksText":"components/ui/HooksText.tsx","~/assets/methodological-doubt.png":"assets/methodological-doubt.png","~/assets/clear-and-distinct.png":"assets/clear-and-distinct.png"}],"assets/cogito.png":[function(require,module,exports) {
 module.exports = "/cogito.f7be2b13.png";
 },{}],"components/fight/EntityPowers.tsx":[function(require,module,exports) {
 "use strict";
@@ -71021,7 +71119,7 @@ var _styledComponents = _interopRequireDefault(require("styled-components"));
 
 var _FightContext = require("~/fight/FightContext");
 
-var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
+var _BuffIcon = _interopRequireDefault(require("~/components/ui/BuffIcon"));
 
 var _HooksText = _interopRequireDefault(require("~/components/ui/HooksText"));
 
@@ -71050,34 +71148,25 @@ var EntityPowers = function EntityPowers(_a) {
   return _react.default.createElement(_react.default.Fragment, null, powers.map(function (power, i) {
     var id = target + ":" + power.name + ":" + i;
     var icon = POWER_ICONS.get(power.name) || "";
-    return _react.default.createElement(_react.default.Fragment, {
-      key: id
-    }, _react.default.createElement(_Tooltip.default, {
+    return _react.default.createElement(_BuffIcon.default, {
+      key: id,
       id: id,
-      place: "bottom"
-    }, _react.default.createElement(PowerName, null, power.name), _react.default.createElement(_HooksText.default, {
-      target: "enemy",
-      hooks: power.hooks
-    })), _react.default.createElement(PowerIcon, {
-      "data-tip": true,
-      "data-for": id,
-      style: {
-        backgroundImage: "url(" + icon + ")"
-      }
-    }));
+      icon: icon,
+      variant: "circle",
+      tooltipContent: _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(PowerName, null, power.name), _react.default.createElement(_HooksText.default, {
+        target: "enemy",
+        hooks: power.hooks
+      }))
+    });
   }));
 };
 
-var MetaTitle = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  text-align: center;\n"], ["\n  text-align: center;\n"])));
-
-var PowerName = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
-
-var PowerIcon = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"], ["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"])));
+var PowerName = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
 
 var _default = EntityPowers;
 exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/components/ui/HooksText":"components/ui/HooksText.tsx","~/assets/cogito.png":"assets/cogito.png"}],"components/fight/EntityBuffs.tsx":[function(require,module,exports) {
+var templateObject_1;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/BuffIcon":"components/ui/BuffIcon.tsx","~/components/ui/HooksText":"components/ui/HooksText.tsx","~/assets/cogito.png":"assets/cogito.png"}],"components/fight/EntityBuffs.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -71093,7 +71182,7 @@ var _styledComponents = _interopRequireDefault(require("styled-components"));
 
 var _FightContext = require("~/fight/FightContext");
 
-var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
+var _BuffIcon = _interopRequireDefault(require("~/components/ui/BuffIcon"));
 
 var _virtue = _interopRequireDefault(require("~/assets/virtue.png"));
 
@@ -71124,46 +71213,41 @@ var EntityAttributeBuff = function EntityAttributeBuff(_a) {
   var iconSrc = ATTRIBUTE_ICONS.get(attribute) || "";
   if (!value) return null;
   var id = target + ":" + attribute;
-  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(AttributeBuffWrapper, {
-    "data-tip": true,
-    "data-for": id
-  }, _react.default.createElement("img", {
-    src: iconSrc,
-    title: attribute
-  }), _react.default.createElement(AttributeBuffValue, null, value)), _react.default.createElement(_Tooltip.default, {
+  return _react.default.createElement(_BuffIcon.default, {
     id: id,
-    place: "bottom"
-  }, _react.default.createElement(AttributeName, null, (0, _lodash.capitalize)(attribute))));
+    icon: iconSrc,
+    variant: "img",
+    value: value,
+    tooltipContent: _react.default.createElement(AttributeName, null, (0, _lodash.capitalize)(attribute))
+  });
 };
 
 var EntityBuffs = function EntityBuffs(_a) {
   var target = _a.target;
   var state = (0, _FightContext.useFight)()[0];
-  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(BuffsWrapper, null, _react.default.createElement(_EntityStance.default, {
+  return _react.default.createElement(BuffsWrapper, {
+    target: target
+  }, _react.default.createElement(_EntityStance.default, {
     target: target
   }), _react.default.createElement(_EntityPowers.default, {
     target: target
-  })), _react.default.createElement(AttributeBuffsWrapper, null, _react.default.createElement(EntityAttributeBuff, {
+  }), _react.default.createElement(EntityAttributeBuff, {
     target: target,
     attribute: "virtue",
     value: state[target].attributes.virtue
-  })));
+  }));
 };
 
-var BuffsWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
+var BuffsWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  justify-content: ", ";\n  height: 32px;\n  padding: 5px;\n"], ["\n  display: flex;\n  justify-content: ", ";\n  height: 32px;\n  padding: 5px;\n"])), function (props) {
+  return props.target === "player" ? "flex-start" : "flex-end";
+});
 
-var AttributeBuffsWrapper = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
-
-var AttributeBuffWrapper = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  position: relative;\n  width: 32px;\n  height: 32px;\n  padding: 5px;\n"], ["\n  position: relative;\n  width: 32px;\n  height: 32px;\n  padding: 5px;\n"])));
-
-var AttributeBuffValue = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  padding: 0 5px;\n  color: black;\n  font-weight: bold;\n  font-size: 0.85em;\n  border-radius: 100px;\n  background: gold;\n"], ["\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  padding: 0 5px;\n  color: black;\n  font-weight: bold;\n  font-size: 0.85em;\n  border-radius: 100px;\n  background: gold;\n"])));
-
-var AttributeName = _styledComponents.default.span(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n  font-weight: bold;\n"], ["\n  font-weight: bold;\n"])));
+var AttributeName = _styledComponents.default.span(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n"], ["\n  font-weight: bold;\n"])));
 
 var _default = EntityBuffs;
 exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5;
-},{"lodash":"../node_modules/lodash/lodash.js","react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/assets/virtue.png":"assets/virtue.png","./EntityStance":"components/fight/EntityStance.tsx","./EntityPowers":"components/fight/EntityPowers.tsx"}],"components/fight/PlayerStage.tsx":[function(require,module,exports) {
+var templateObject_1, templateObject_2;
+},{"lodash":"../node_modules/lodash/lodash.js","react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/BuffIcon":"components/ui/BuffIcon.tsx","~/assets/virtue.png":"assets/virtue.png","./EntityStance":"components/fight/EntityStance.tsx","./EntityPowers":"components/fight/EntityPowers.tsx"}],"components/fight/PlayerStage.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -71203,7 +71287,7 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
 
 var PlayerStage = function PlayerStage() {
   var player = (0, _FightContext.useFight)()[0].player;
-  return React.createElement("div", null, React.createElement("h2", null, "Player"), React.createElement(StageWrapper, null, React.createElement(_ResourceBars.default, {
+  return React.createElement("div", null, React.createElement("h2", null, "Player"), React.createElement(StageWrapper, null, React.createElement(PlayerFigure, null), React.createElement("div", null, React.createElement(_ResourceBars.default, {
     target: "player",
     hp: {
       value: player.attributes.hp,
@@ -71213,16 +71297,16 @@ var PlayerStage = function PlayerStage() {
       value: player.attributes.certainty,
       total: player.player.baseAttributes.certainty
     }
-  }), React.createElement("div", null, React.createElement(PlayerFigure, null), React.createElement(_EntityBuffs.default, {
+  }), React.createElement(_EntityBuffs.default, {
     target: "player"
   }))));
 };
 
-var StageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
+var StageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  align-items: flex-start;\n"], ["\n  display: flex;\n  align-items: flex-start;\n"])));
 
 var PlayerFigure = _styledComponents.default.img.attrs({
   src: _player.default
-})(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  height: 200px;\n"], ["\n  height: 200px;\n"])));
+})(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  height: 120px;\n  margin-right: 10px;\n"], ["\n  height: 120px;\n  margin-right: 10px;\n"])));
 
 var _default = PlayerStage;
 exports.default = _default;
@@ -71308,10 +71392,10 @@ var EnemyMechanicLog = function EnemyMechanicLog() {
       "data-tip": true,
       "data-for": id
     }, _react.default.createElement(GameLogItemHeader, null, _react.default.createElement("span", null, i === 0 ? "🗡️ Last Action" : null), _react.default.createElement("span", null, "Turn ", turn)), _react.default.createElement(GameLogMechanicName, null, mechanic.name)));
-  }));
+  }), played.length === 0 ? _react.default.createElement(GameLogItem, null, _react.default.createElement(GameLogMechanicName, null, "Waiting...")) : null);
 };
 
-var GameLog = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n  max-height: 150px;\n  min-width: 200px;\n  overflow-y: auto;\n"], ["\n  display: flex;\n  flex-direction: column;\n  max-height: 150px;\n  min-width: 200px;\n  overflow-y: auto;\n"])));
+var GameLog = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n  height: 150px;\n  width: 200px;\n  margin-top: 20px;\n  overflow-y: auto;\n"], ["\n  display: flex;\n  flex-direction: column;\n  height: 150px;\n  width: 200px;\n  margin-top: 20px;\n  overflow-y: auto;\n"])));
 
 var GameLogItem = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  padding: 5px;\n  margin-bottom: 5px;\n  background: rgba(0, 0, 0, 0.66);\n  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);\n  border-radius: 4px;\n"], ["\n  padding: 5px;\n  margin-bottom: 5px;\n  background: rgba(0, 0, 0, 0.66);\n  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);\n  border-radius: 4px;\n"])));
 
@@ -71366,9 +71450,7 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
 
 var EnemyStage = function EnemyStage() {
   var enemy = (0, _FightContext.useFight)()[0].enemy;
-  return React.createElement("div", null, React.createElement(Title, null, "Descartes"), React.createElement(StageWrapper, null, React.createElement(AlignRight, null, React.createElement(EnemyFigure, null), React.createElement(_EntityBuffs.default, {
-    target: "enemy"
-  })), React.createElement(AlignRight, null, React.createElement(_ResourceBars.default, {
+  return React.createElement("div", null, React.createElement(Title, null, "Descartes"), React.createElement(StageWrapper, null, React.createElement("div", null, React.createElement(_ResourceBars.default, {
     target: "enemy",
     hp: {
       value: enemy.attributes.hp,
@@ -71378,16 +71460,18 @@ var EnemyStage = function EnemyStage() {
       value: enemy.attributes.certainty,
       total: enemy.enemy.baseAttributes.certainty
     }
-  }), React.createElement(_EnemyMechanicLog.default, null))));
+  }), React.createElement(_EntityBuffs.default, {
+    target: "enemy"
+  })), React.createElement("div", null, React.createElement(EnemyFigure, null))), React.createElement(AlignRight, null, React.createElement(_EnemyMechanicLog.default, null)));
 };
 
 var Title = _styledComponents.default.h2(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  text-align: right;\n"], ["\n  text-align: right;\n"])));
 
-var StageWrapper = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
+var StageWrapper = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: flex;\n  align-items: flex-start;\n"], ["\n  display: flex;\n  align-items: flex-start;\n"])));
 
 var EnemyFigure = _styledComponents.default.img.attrs({
   src: _descartes.default
-})(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  height: 200px;\n"], ["\n  height: 200px;\n"])));
+})(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  height: 120px;\n  margin-left: 10px;\n"], ["\n  height: 120px;\n  margin-left: 10px;\n"])));
 
 var AlignRight = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n"], ["\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n"])));
 
@@ -71821,7 +71905,7 @@ var __extends = void 0 && (void 0).__extends || function () {
   };
 }();
 
-var GlobalStyles = (0, _styledComponents.createGlobalStyle)(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"], ["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"])));
+var GlobalStyles = (0, _styledComponents.createGlobalStyle)(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  /**\n   * Add CSS reset, and start using a theme...\n   */\n  p {\n    margin: 5px 0;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"], ["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  /**\n   * Add CSS reset, and start using a theme...\n   */\n  p {\n    margin: 5px 0;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"])));
 
 var App =
 /** @class */
@@ -71886,7 +71970,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "52064" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64189" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
