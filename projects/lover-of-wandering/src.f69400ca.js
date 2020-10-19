@@ -64174,17 +64174,22 @@ var actions = {
 exports.actions = actions;
 var effects = {
   RUN_HOOKS: function RUN_HOOKS(_a) {
-    var hooks = _a.data.hooks,
+    var _b = _a.data,
+        target = _b.target,
+        when = _b.when,
         affect = _a.affect,
         state = _a.state;
     return __awaiter(void 0, void 0, void 0, function () {
-      var _i, hooks_1, hook, isScripted, isSuccess, shouldRun, _b, _c, effect;
+      var hooks, _i, hooks_1, hook, isScripted, isSuccess, shouldRun, _c, _d, effect;
 
-      return __generator(this, function (_d) {
-        switch (_d.label) {
+      return __generator(this, function (_e) {
+        switch (_e.label) {
           case 0:
+            hooks = state[target].hooks.filter(function (hook) {
+              return hook.when === when;
+            });
             _i = 0, hooks_1 = hooks;
-            _d.label = 1;
+            _e.label = 1;
 
           case 1:
             if (!(_i < hooks_1.length)) return [3
@@ -64219,25 +64224,25 @@ var effects = {
             if (!shouldRun) return [3
             /*break*/
             , 5];
-            _b = 0, _c = hook.effects;
-            _d.label = 2;
+            _c = 0, _d = hook.effects;
+            _e.label = 2;
 
           case 2:
-            if (!(_b < _c.length)) return [3
+            if (!(_c < _d.length)) return [3
             /*break*/
             , 5];
-            effect = _c[_b];
+            effect = _d[_c];
             return [4
             /*yield*/
             , affect(effect.name, effect.data)];
 
           case 3:
-            _d.sent();
+            _e.sent();
 
-            _d.label = 4;
+            _e.label = 4;
 
           case 4:
-            _b++;
+            _c++;
             return [3
             /*break*/
             , 2];
@@ -64307,6 +64312,8 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.effects = exports.actions = void 0;
+
+var _ids = require("~/utils/ids");
 
 var _hooks = require("./hooks.model");
 
@@ -64532,15 +64539,18 @@ var effects = __assign(__assign({}, _hooks.effects), {
     var _b = _a.data,
         target = _b.target,
         damage = _b.damage,
+        _c = _b.virtueMultiplier,
+        virtueMultiplier = _c === void 0 ? 1 : _c,
         state = _a.state,
         dispatch = _a.dispatch;
     return __awaiter(void 0, void 0, void 0, function () {
-      var targetCertainty, unblockedDamage;
-      return __generator(this, function (_c) {
-        switch (_c.label) {
+      var dealer, targetCertainty, unblockedDamage;
+      return __generator(this, function (_d) {
+        switch (_d.label) {
           case 0:
+            dealer = target === "player" ? state.enemy : state.player;
             targetCertainty = state[target].attributes.certainty;
-            unblockedDamage = damage - targetCertainty;
+            unblockedDamage = damage + dealer.attributes.virtue * virtueMultiplier - targetCertainty;
             if (!(targetCertainty > 0)) return [3
             /*break*/
             , 2];
@@ -64548,14 +64558,14 @@ var effects = __assign(__assign({}, _hooks.effects), {
             /*yield*/
             , dispatch("SET_ATTRIBUTE", {
               target: target,
-              value: Math.max(state[target].attributes.certainty - damage, 0),
+              value: Math.max(-unblockedDamage, 0),
               attribute: "certainty"
             })];
 
           case 1:
-            _c.sent();
+            _d.sent();
 
-            _c.label = 2;
+            _d.label = 2;
 
           case 2:
             if (!(unblockedDamage >= 0)) return [3
@@ -64570,9 +64580,53 @@ var effects = __assign(__assign({}, _hooks.effects), {
             })];
 
           case 3:
+            _d.sent();
+
+            _d.label = 4;
+
+          case 4:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  DEAL_DAMAGE_N_TIMES: function DEAL_DAMAGE_N_TIMES(_a) {
+    var _b = _a.data,
+        target = _b.target,
+        damage = _b.damage,
+        times = _b.times,
+        affect = _a.affect;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var i;
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            i = 0;
+            _c.label = 1;
+
+          case 1:
+            if (!(i < times)) return [3
+            /*break*/
+            , 4];
+            return [4
+            /*yield*/
+            , affect("DEAL_DAMAGE", {
+              target: target,
+              damage: damage
+            })];
+
+          case 2:
             _c.sent();
 
-            _c.label = 4;
+            _c.label = 3;
+
+          case 3:
+            i++;
+            return [3
+            /*break*/
+            , 1];
 
           case 4:
             return [2
@@ -64610,6 +64664,99 @@ var effects = __assign(__assign({}, _hooks.effects), {
       });
     });
   },
+  GAIN_VIRTUE: function GAIN_VIRTUE(_a) {
+    var _b = _a.data,
+        target = _b.target,
+        virtue = _b.virtue,
+        nTurns = _b.nTurns,
+        state = _a.state,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      var hookId;
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("SET_ATTRIBUTE", {
+              target: target,
+              value: state[target].attributes.virtue + virtue,
+              attribute: "virtue"
+            })];
+
+          case 1:
+            _c.sent();
+
+            if (!(nTurns != undefined)) return [3
+            /*break*/
+            , 3];
+            hookId = (0, _ids.nextID)();
+            return [4
+            /*yield*/
+            , dispatch("ADD_HOOK", {
+              target: target,
+              hook: {
+                id: hookId,
+                p: 1,
+                when: "end-of-turn",
+                turns: [state.turn + nTurns],
+                effects: [{
+                  name: "LOSE_VIRTUE",
+                  data: {
+                    target: target,
+                    virtue: virtue
+                  }
+                }, {
+                  name: "REMOVE_HOOK",
+                  data: {
+                    target: target,
+                    hookId: hookId
+                  }
+                }]
+              }
+            })];
+
+          case 2:
+            _c.sent();
+
+            _c.label = 3;
+
+          case 3:
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
+  LOSE_VIRTUE: function LOSE_VIRTUE(_a) {
+    var _b = _a.data,
+        target = _b.target,
+        virtue = _b.virtue,
+        state = _a.state,
+        dispatch = _a.dispatch;
+    return __awaiter(void 0, void 0, void 0, function () {
+      return __generator(this, function (_c) {
+        switch (_c.label) {
+          case 0:
+            return [4
+            /*yield*/
+            , dispatch("SET_ATTRIBUTE", {
+              target: target,
+              value: state[target].attributes.virtue - virtue,
+              attribute: "virtue"
+            })];
+
+          case 1:
+            _c.sent();
+
+            return [2
+            /*return*/
+            ];
+        }
+      });
+    });
+  },
   CLEAR_CERTAINTY: function CLEAR_CERTAINTY(_a) {
     var target = _a.data.target,
         dispatch = _a.dispatch;
@@ -64622,7 +64769,8 @@ var effects = __assign(__assign({}, _hooks.effects), {
             , dispatch("SET_ATTRIBUTE", {
               target: target,
               value: 0,
-              attribute: "certainty"
+              attribute: "certainty",
+              silent: true
             })];
 
           case 1:
@@ -64809,7 +64957,7 @@ var effects = __assign(__assign({}, _hooks.effects), {
 });
 
 exports.effects = effects;
-},{"./hooks.model":"fight/hooks.model.ts"}],"fight/cards.model.ts":[function(require,module,exports) {
+},{"~/utils/ids":"utils/ids.ts","./hooks.model":"fight/hooks.model.ts"}],"fight/cards.model.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65049,6 +65197,16 @@ var actions = {
     return __assign(__assign({}, state), {
       player: __assign(__assign({}, state.player), {
         cards: __assign(__assign({}, state.player.cards), (_b = {}, _b[pile] = (0, _lodash.shuffle)(__spreadArrays(state.player.cards[pile], [card])), _b))
+      })
+    });
+  },
+  LOAD_DECK: function LOAD_DECK(state, _a) {
+    var deck = _a.deck;
+    return __assign(__assign({}, state), {
+      player: __assign(__assign({}, state.player), {
+        cards: __assign(__assign({}, state.player.cards), {
+          draw: (0, _lodash.shuffle)(deck)
+        })
       })
     });
   }
@@ -65430,9 +65588,8 @@ var effects = __assign(__assign(__assign({}, _entity.effects), _cards.effects), 
             return [4
             /*yield*/
             , affect("RUN_HOOKS", {
-              hooks: state.player.hooks.filter(function (hook) {
-                return hook.when === "start-of-turn";
-              })
+              target: "player",
+              when: "start-of-turn"
             })];
 
           case 3:
@@ -65485,9 +65642,8 @@ var effects = __assign(__assign(__assign({}, _entity.effects), _cards.effects), 
             return [4
             /*yield*/
             , affect("RUN_HOOKS", {
-              hooks: state.player.hooks.filter(function (hook) {
-                return hook.when === "end-of-turn";
-              })
+              target: "player",
+              when: "end-of-turn"
             })];
 
           case 2:
@@ -65791,9 +65947,8 @@ var effects = __assign(__assign({}, _entity.effects), {
             return [4
             /*yield*/
             , affect("RUN_HOOKS", {
-              hooks: state.enemy.hooks.filter(function (hook) {
-                return hook.when === "start-of-turn";
-              })
+              target: "enemy",
+              when: "start-of-turn"
             })];
 
           case 1:
@@ -65802,9 +65957,8 @@ var effects = __assign(__assign({}, _entity.effects), {
             return [4
             /*yield*/
             , affect("RUN_HOOKS", {
-              hooks: state.enemy.hooks.filter(function (hook) {
-                return hook.when === "end-of-turn";
-              })
+              target: "enemy",
+              when: "end-of-turn"
             })];
 
           case 2:
@@ -66065,7 +66219,7 @@ var effects = __assign(__assign(__assign({}, _player.effects), _enemy.effects), 
 });
 
 exports.effects = effects;
-},{"./player.model":"fight/player.model.ts","./enemy.model":"fight/enemy.model.ts"}],"fight/FightModel.ts":[function(require,module,exports) {
+},{"./player.model":"fight/player.model.ts","./enemy.model":"fight/enemy.model.ts"}],"fight/initFight.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -66162,9 +66316,9 @@ var _react = require("react");
 
 var _ModelProvider = require("~/logic/ModelProvider");
 
-var _FightModel = require("./FightModel");
+var _initFight = require("./initFight");
 
-var FightContext = (0, _ModelProvider.createModelContext)((0, _FightModel.initFight)({
+var FightContext = (0, _ModelProvider.createModelContext)((0, _initFight.initFight)({
   deck: [],
   energy: 0,
   baseAttributes: {
@@ -66187,87 +66341,7 @@ var useFight = function useFight() {
 exports.useFight = useFight;
 var _default = FightContext;
 exports.default = _default;
-},{"react":"../node_modules/react/index.js","~/logic/ModelProvider":"logic/ModelProvider.tsx","./FightModel":"fight/FightModel.ts"}],"game/cards/base.ts":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.doubt = exports.insight = void 0;
-
-var _ids = require("~/utils/ids");
-
-var insight = function insight() {
-  return {
-    id: (0, _ids.nextID)(),
-    name: "Insight",
-    type: "skill",
-    cost: 1,
-    effects: [{
-      name: "GAIN_CERTAINTY",
-      data: {
-        target: "player",
-        certainty: 12
-      }
-    }]
-  };
-};
-
-exports.insight = insight;
-
-var doubt = function doubt() {
-  return {
-    id: (0, _ids.nextID)(),
-    name: "Doubt",
-    type: "attack",
-    cost: 1,
-    effects: [{
-      name: "DEAL_DAMAGE",
-      data: {
-        target: "enemy",
-        damage: 10
-      }
-    }]
-  };
-};
-
-exports.doubt = doubt;
-},{"~/utils/ids":"utils/ids.ts"}],"game/cards/decks.ts":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.startingDeck = void 0;
-
-var _lodash = require("lodash");
-
-var baseCards = _interopRequireWildcard(require("./base"));
-
-function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
-
-var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
-  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
-    s += arguments[i].length;
-  }
-
-  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
-    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
-      r[k] = a[j];
-    }
-  }
-
-  return r;
-};
-
-var startingDeck = function startingDeck() {
-  return __spreadArrays((0, _lodash.times)(5, baseCards.insight), (0, _lodash.times)(5, baseCards.doubt));
-};
-
-exports.startingDeck = startingDeck;
-},{"lodash":"../node_modules/lodash/lodash.js","./base":"game/cards/base.ts"}],"game/player/default.ts":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","~/logic/ModelProvider":"logic/ModelProvider.tsx","./initFight":"fight/initFight.ts"}],"game/player/default.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -66275,21 +66349,20 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.defaultPlayer = void 0;
 
-var _decks = require("~/game/cards/decks");
-
 var defaultPlayer = function defaultPlayer() {
   return {
-    deck: (0, _decks.startingDeck)(),
+    deck: [],
     energy: 3,
     baseAttributes: {
       hp: 100,
-      certainty: 0
+      certainty: 0,
+      virtue: 0
     }
   };
 };
 
 exports.defaultPlayer = defaultPlayer;
-},{"~/game/cards/decks":"game/cards/decks.ts"}],"game/cards/curses.ts":[function(require,module,exports) {
+},{}],"game/cards/curses.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -66392,7 +66465,7 @@ var cogito = function cogito() {
       id: (0, _ids.nextID)(),
       p: 1,
       turns: [],
-      when: "start-of-turn",
+      when: "end-of-turn",
       effects: [{
         name: "GAIN_CERTAINTY",
         data: {
@@ -66667,14 +66740,199 @@ var createDescartes = function createDescartes() {
     name: "Descartes",
     baseAttributes: {
       hp: 100,
-      certainty: 0
+      certainty: 0,
+      virtue: 0
     },
     baseHooks: [hooks.raze(), hooks.dreamArgument(), hooks.geniumMalignum(), hooks.doubt(), hooks.insight(), hooks.cogito(), hooks.clearAndDistinct()]
   };
 };
 
 exports.createDescartes = createDescartes;
-},{"./hooks":"game/ai/descartes/hooks.ts"}],"components/fight/FightStageHeader.tsx":[function(require,module,exports) {
+},{"./hooks":"game/ai/descartes/hooks.ts"}],"game/cards/base.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.admonish = exports.humbleBrag = exports.goodDeed = exports.generalization = exports.inuition = exports.doubt = exports.insight = void 0;
+
+var _ids = require("~/utils/ids");
+
+var insight = function insight() {
+  return {
+    id: (0, _ids.nextID)(),
+    name: "Insight",
+    type: "skill",
+    cost: 1,
+    effects: [{
+      name: "GAIN_CERTAINTY",
+      data: {
+        target: "player",
+        certainty: 12
+      }
+    }]
+  };
+};
+
+exports.insight = insight;
+
+var doubt = function doubt() {
+  return {
+    id: (0, _ids.nextID)(),
+    name: "Doubt",
+    type: "attack",
+    cost: 1,
+    effects: [{
+      name: "DEAL_DAMAGE",
+      data: {
+        target: "enemy",
+        damage: 10
+      }
+    }]
+  };
+};
+
+exports.doubt = doubt;
+
+var inuition = function inuition() {
+  return {
+    id: (0, _ids.nextID)(),
+    name: "Intuition",
+    type: "skill",
+    cost: 1,
+    effects: [{
+      name: "GAIN_CERTAINTY",
+      data: {
+        target: "player",
+        certainty: 12
+      }
+    }, {
+      name: "DRAW_CARDS",
+      data: {
+        nCards: 1
+      }
+    }]
+  };
+};
+
+exports.inuition = inuition;
+
+var generalization = function generalization() {
+  return {
+    id: (0, _ids.nextID)(),
+    name: "Generalization",
+    type: "attack",
+    cost: 1,
+    effects: [{
+      name: "DEAL_DAMAGE_N_TIMES",
+      data: {
+        target: "enemy",
+        damage: 3,
+        times: 3
+      }
+    }]
+  };
+};
+
+exports.generalization = generalization;
+
+var goodDeed = function goodDeed() {
+  return {
+    id: (0, _ids.nextID)(),
+    name: "Good Deed",
+    type: "skill",
+    cost: 1,
+    effects: [{
+      name: "GAIN_VIRTUE",
+      data: {
+        target: "player",
+        virtue: 1
+      }
+    }]
+  };
+};
+
+exports.goodDeed = goodDeed;
+
+var humbleBrag = function humbleBrag() {
+  return {
+    id: (0, _ids.nextID)(),
+    name: "Humble Brag",
+    type: "skill",
+    cost: 0,
+    effects: [{
+      name: "GAIN_VIRTUE",
+      data: {
+        target: "player",
+        virtue: 3,
+        nTurns: 0
+      }
+    }]
+  };
+};
+
+exports.humbleBrag = humbleBrag;
+
+var admonish = function admonish() {
+  return {
+    id: (0, _ids.nextID)(),
+    name: "Admonish",
+    type: "attack",
+    cost: 2,
+    effects: [{
+      name: "DEAL_DAMAGE",
+      data: {
+        target: "enemy",
+        damage: 7,
+        virtueMultiplier: 3
+      }
+    }]
+  };
+};
+
+exports.admonish = admonish;
+},{"~/utils/ids":"utils/ids.ts"}],"game/cards/decks.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.virtueDeck = exports.startingDeck = void 0;
+
+var _lodash = require("lodash");
+
+var baseCards = _interopRequireWildcard(require("./base"));
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var __spreadArrays = void 0 && (void 0).__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
+
+var startingDeck = function startingDeck() {
+  return __spreadArrays((0, _lodash.times)(5, baseCards.insight), (0, _lodash.times)(5, baseCards.doubt));
+};
+
+exports.startingDeck = startingDeck;
+
+var virtueDeck = function virtueDeck() {
+  return __spreadArrays(startingDeck(), [baseCards.humbleBrag(), baseCards.inuition(), baseCards.generalization(), baseCards.goodDeed(), baseCards.admonish()]);
+};
+
+exports.virtueDeck = virtueDeck;
+},{"lodash":"../node_modules/lodash/lodash.js","./base":"game/cards/base.ts"}],"components/fight/FightStageHeader.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -66753,17 +67011,27 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
 var PaperCard = function PaperCard(_a) {
   var card = _a.card,
       _onClick = _a.onClick,
+      _b = _a.onMouseOver,
+      onMouseOver = _b === void 0 ? function () {
+    return null;
+  } : _b,
+      _c = _a.onMouseOut,
+      onMouseOut = _c === void 0 ? function () {
+    return null;
+  } : _c,
       children = _a.children,
-      _b = _a.disabled,
-      disabled = _b === void 0 ? false : _b,
-      _c = _a.inTransition,
-      inTransition = _c === void 0 ? false : _c;
+      _d = _a.disabled,
+      disabled = _d === void 0 ? false : _d,
+      _e = _a.inTransition,
+      inTransition = _e === void 0 ? false : _e;
   return React.createElement(CardWrapper, {
     disabled: disabled,
     intransition: inTransition,
     onClick: function onClick() {
       return _onClick(card);
-    }
+    },
+    onMouseEnter: onMouseOver,
+    onMouseLeave: onMouseOut
   }, React.createElement(CardCost, null, card.cost), React.createElement(CardTitle, null, card.name), React.createElement(CardType, {
     type: card.type
   }, card.type), children);
@@ -67176,32 +67444,25 @@ var ResourceBars = function ResourceBars(_a) {
       setCertaintyDeltas = _g[1];
 
   React.useEffect(function () {
-    model.subscribeToEffect("DEAL_DAMAGE", function (data) {
-      if (data.target !== target) return;
-      setHpDeltas(function (deltas) {
-        return __spreadArrays(deltas, [-data.damage]);
-      });
+    model.subscribeToAction("SET_ATTRIBUTE", function (data, state) {
+      if (data.target !== target || data.silent) return;
+      var currentValue = state[target].attributes[data.attribute];
+      var newDelta = data.value - currentValue;
+
+      switch (data.attribute) {
+        case "hp":
+          setHpDeltas(function (deltas) {
+            return __spreadArrays(deltas, [newDelta]);
+          });
+          break;
+
+        case "certainty":
+          setCertaintyDeltas(function (deltas) {
+            return __spreadArrays(deltas, [newDelta]);
+          });
+          break;
+      }
     });
-    model.subscribeToEffect("GAIN_CERTAINTY", function (data) {
-      if (data.target !== target) return;
-      setCertaintyDeltas(function (deltas) {
-        return __spreadArrays(deltas, [data.certainty]);
-      });
-    }); // Listening to the individual "SET_ATTRIBUTES" is more accurate, but
-    // unfortunately shows things like "CLEAR_CERTAINTY", which happens every turn.
-    // model.subscribeToAction("SET_ATTRIBUTE", (data, state) => {
-    //   if (data.target !== target) return;
-    //   const currentValue = state[target].attributes[data.attribute];
-    //   const newDelta = data.value - currentValue;
-    //   switch (data.attribute) {
-    //     case "hp":
-    //       setHpDeltas((deltas) => [...deltas, newDelta]);
-    //       break;
-    //     case "certainty":
-    //       setCertaintyDeltas((deltas) => [...deltas, newDelta]);
-    //       break;
-    //   }
-    // });
   }, []);
   return React.createElement(ResourceBarsWrapper, null, React.createElement(_VerticalBar.default, {
     label: "Resolve",
@@ -67223,69 +67484,7 @@ var ResourceBarsWrapper = _styledComponents.default.div(templateObject_1 || (tem
 var _default = ResourceBars;
 exports.default = _default;
 var templateObject_1;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/VerticalBar":"components/ui/VerticalBar.tsx"}],"components/fight/PlayerStage.tsx":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var React = _interopRequireWildcard(require("react"));
-
-var _styledComponents = _interopRequireDefault(require("styled-components"));
-
-var _FightContext = require("~/fight/FightContext");
-
-var _player = _interopRequireDefault(require("~/assets/player.png"));
-
-var _ResourceBars = _interopRequireDefault(require("./ResourceBars"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
-
-var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
-  if (Object.defineProperty) {
-    Object.defineProperty(cooked, "raw", {
-      value: raw
-    });
-  } else {
-    cooked.raw = raw;
-  }
-
-  return cooked;
-};
-
-var PlayerStage = function PlayerStage() {
-  var player = (0, _FightContext.useFight)()[0].player;
-  return React.createElement("div", null, React.createElement("h2", null, "Player"), React.createElement(StageWrapper, null, React.createElement(_ResourceBars.default, {
-    target: "player",
-    hp: {
-      value: player.attributes.hp,
-      total: player.player.baseAttributes.hp
-    },
-    certainty: {
-      value: player.attributes.certainty,
-      total: player.player.baseAttributes.certainty
-    }
-  }), React.createElement(PlayerFigure, null)));
-};
-
-var StageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
-
-var PlayerFigure = _styledComponents.default.img.attrs({
-  src: _player.default
-})(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  height: 200px;\n"], ["\n  height: 200px;\n"])));
-
-var _default = PlayerStage;
-exports.default = _default;
-var templateObject_1, templateObject_2;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/assets/player.png":"assets/player.png","./ResourceBars":"components/fight/ResourceBars.tsx"}],"assets/descartes.png":[function(require,module,exports) {
-module.exports = "/descartes.8bcf3031.png";
-},{}],"../node_modules/prop-types/factoryWithTypeCheckers.js":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/VerticalBar":"components/ui/VerticalBar.tsx"}],"../node_modules/prop-types/factoryWithTypeCheckers.js":[function(require,module,exports) {
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -70387,7 +70586,225 @@ var ReactTooltip = staticMethods(_class = windowListener(_class = customEvent(_c
 
 var _default = ReactTooltip;
 exports.default = _default;
-},{"react":"../node_modules/react/index.js","prop-types":"../node_modules/prop-types/index.js","uuid":"../node_modules/uuid/dist/esm-browser/index.js"}],"components/ui/HooksText.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","prop-types":"../node_modules/prop-types/index.js","uuid":"../node_modules/uuid/dist/esm-browser/index.js"}],"components/ui/Tooltip.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _react = _interopRequireDefault(require("react"));
+
+var _reactTooltip = _interopRequireDefault(require("react-tooltip"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Tooltip = function Tooltip(_a) {
+  var id = _a.id,
+      place = _a.place,
+      children = _a.children;
+  return _react.default.createElement(_reactTooltip.default, {
+    id: id,
+    place: place,
+    effect: "solid",
+    backgroundColor: "white",
+    textColor: "#333333",
+    multiline: true
+  }, children);
+};
+
+var _default = Tooltip;
+exports.default = _default;
+},{"react":"../node_modules/react/index.js","react-tooltip":"../node_modules/react-tooltip/dist/index.es.js"}],"assets/virtue.png":[function(require,module,exports) {
+module.exports = "/virtue.74dabebc.png";
+},{}],"components/ui/EffectsText.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _react = _interopRequireDefault(require("react"));
+
+var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FightContext = require("~/fight/FightContext");
+
+var _HooksText = _interopRequireDefault(require("./HooksText"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
+  if (Object.defineProperty) {
+    Object.defineProperty(cooked, "raw", {
+      value: raw
+    });
+  } else {
+    cooked.raw = raw;
+  }
+
+  return cooked;
+};
+
+/**
+ * Calculates modified damage from virtue
+ */
+var getModifiedDamage = function getModifiedDamage(state, effectDamage, target, virtueMultiplier) {
+  if (virtueMultiplier === void 0) {
+    virtueMultiplier = 1;
+  }
+
+  var dealer = target === "enemy" ? state.player : state.enemy;
+  var damage = {
+    base: effectDamage,
+    modified: effectDamage + dealer.attributes.virtue * virtueMultiplier
+  };
+  var isModified = damage.base !== damage.modified;
+  return {
+    damage: damage,
+    isModified: isModified
+  };
+};
+
+var GainText = function GainText(_a) {
+  var target = _a.target,
+      effectTarget = _a.effectTarget,
+      enemyName = _a.enemyName,
+      children = _a.children;
+  return _react.default.createElement(EffectText, null, target ? " " + (effectTarget === "enemy" ? enemyName : "Player") + " gains " : "Gain ", children);
+};
+/**
+ * We define how each effect is rendered by mapping from Effect.name to an EffectTextComponent.
+ * The EffectTextComponent will receive the type of Effect from the key in this map.
+ */
+
+
+var EFFECTS_TEXT_MAP = {
+  DEAL_DAMAGE: function DEAL_DAMAGE(_a) {
+    var effect = _a.effect,
+        state = _a.state,
+        target = _a.target,
+        showModifiers = _a.showModifiers;
+    var virtueMultiplier = effect.data.virtueMultiplier;
+
+    var _b = getModifiedDamage(state, effect.data.damage, effect.data.target, virtueMultiplier),
+        damage = _b.damage,
+        isModified = _b.isModified;
+
+    var displayedDamage = showModifiers && isModified ? damage.modified : damage.base;
+    return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(EffectText, null, "Deal ", _react.default.createElement(HighlightedText, {
+      modified: showModifiers && isModified
+    }, displayedDamage, " damage"), target ? " to " + (effect.data.target === "enemy" ? state.enemy.enemy.name : "player") : null), virtueMultiplier ? _react.default.createElement(EffectText, null, "This card is affected by virtue ", _react.default.createElement(HighlightedText, null, virtueMultiplier, " times")) : null);
+  },
+  DEAL_DAMAGE_N_TIMES: function DEAL_DAMAGE_N_TIMES(_a) {
+    var effect = _a.effect,
+        state = _a.state,
+        target = _a.target,
+        showModifiers = _a.showModifiers;
+
+    var _b = getModifiedDamage(state, effect.data.damage, effect.data.target),
+        damage = _b.damage,
+        isModified = _b.isModified;
+
+    var displayedDamage = showModifiers && isModified ? damage.modified : damage.base;
+    return _react.default.createElement(EffectText, null, "Deal ", _react.default.createElement(HighlightedText, {
+      modified: showModifiers && isModified
+    }, displayedDamage, " damage ", effect.data.times, " times"), target ? " to " + (effect.data.target === "enemy" ? state.enemy.enemy.name : "player") : null);
+  },
+  GAIN_CERTAINTY: function GAIN_CERTAINTY(_a) {
+    var effect = _a.effect,
+        state = _a.state,
+        target = _a.target;
+    return _react.default.createElement(GainText, {
+      target: target,
+      effectTarget: effect.data.target,
+      enemyName: state.enemy.enemy.name
+    }, _react.default.createElement(HighlightedText, null, effect.data.certainty, " certainty"));
+  },
+  GAIN_VIRTUE: function GAIN_VIRTUE(_a) {
+    var effect = _a.effect,
+        state = _a.state,
+        target = _a.target;
+    var nTurns = effect.data.nTurns;
+    return _react.default.createElement(GainText, {
+      target: target,
+      effectTarget: effect.data.target,
+      enemyName: state.enemy.enemy.name
+    }, _react.default.createElement(HighlightedText, null, effect.data.virtue, " virtue"), nTurns !== undefined ? nTurns === 0 ? " this turn" : " for " + nTurns + " turn" + (nTurns > 1 ? "s" : "") : null);
+  },
+  EXHAUST_CARD: function EXHAUST_CARD() {
+    return _react.default.createElement(EffectText, null, _react.default.createElement(HighlightedText, null, "Exhaust"));
+  },
+  ENTER_STANCE: function ENTER_STANCE(_a) {
+    var effect = _a.effect,
+        target = _a.target,
+        showHooks = _a.showHooks;
+    return _react.default.createElement(EffectText, null, "Enter stance ", _react.default.createElement(HighlightedText, null, effect.data.stance.name), showHooks ? _react.default.createElement(_HooksText.default, {
+      hooks: effect.data.stance.hooks,
+      target: target
+    }) : null);
+  },
+  ADD_POWER: function ADD_POWER(_a) {
+    var effect = _a.effect,
+        target = _a.target,
+        showHooks = _a.showHooks;
+    return _react.default.createElement(EffectText, null, "Gain power ", _react.default.createElement(HighlightedText, null, effect.data.power.name), showHooks ? _react.default.createElement(_HooksText.default, {
+      hooks: effect.data.power.hooks,
+      target: target
+    }) : null);
+  },
+  DRAW_CARDS: function DRAW_CARDS(_a) {
+    var effect = _a.effect;
+    return _react.default.createElement(EffectText, null, "Draw ", _react.default.createElement(HighlightedText, null, effect.data.nCards, " card", effect.data.nCards > 1 ? "s" : null));
+  },
+  ADD_CARD: function ADD_CARD(_a) {
+    var effect = _a.effect;
+    return _react.default.createElement(EffectText, null, "Add ", _react.default.createElement(HighlightedText, null, effect.data.card().name), " to player's", " ", effect.data.pile, " ", "draw,discard".includes(effect.data.pile) ? "pile" : null);
+  }
+};
+
+var EffectsText = function EffectsText(_a) {
+  var effects = _a.effects,
+      target = _a.target,
+      _b = _a.showHooks,
+      showHooks = _b === void 0 ? false : _b,
+      _c = _a.showModifiers,
+      showModifiers = _c === void 0 ? false : _c;
+  var state = (0, _FightContext.useFight)()[0];
+  return _react.default.createElement(EffectsTextWrapper, null, effects.map(function (effect, i) {
+    var EffectTextComponent = EFFECTS_TEXT_MAP[effect.name];
+
+    if (EffectTextComponent) {
+      return _react.default.createElement(EffectTextComponent, {
+        key: i,
+        effect: effect,
+        state: state,
+        target: target,
+        showHooks: showHooks,
+        showModifiers: showModifiers
+      });
+    } else {
+      return _react.default.createElement(EffectText, {
+        key: i
+      }, _react.default.createElement(HighlightedText, null, effect.name), JSON.stringify(effect.data));
+    }
+  }));
+};
+
+var EffectsTextWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  flex: 1;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  text-align: center;\n"], ["\n  flex: 1;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  text-align: center;\n"])));
+
+var EffectText = _styledComponents.default.span(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  text-align: center;\n  margin-bottom: 8px;\n"], ["\n  text-align: center;\n  margin-bottom: 8px;\n"])));
+
+var HighlightedText = _styledComponents.default.span(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  color: ", ";\n  font-weight: bold;\n"], ["\n  color: ", ";\n  font-weight: bold;\n"])), function (props) {
+  return props.modified ? "mediumseagreen" : "navy";
+});
+
+var _default = EffectsText;
+exports.default = _default;
+var templateObject_1, templateObject_2, templateObject_3;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","./HooksText":"components/ui/HooksText.tsx"}],"components/ui/HooksText.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -70515,7 +70932,11 @@ var HookListItem = _styledComponents.default.div(templateObject_3 || (templateOb
 var _default = HooksText;
 exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3;
-},{"lodash":"../node_modules/lodash/lodash.js","react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./EffectsText":"components/ui/EffectsText.tsx"}],"components/ui/EffectsText.tsx":[function(require,module,exports) {
+},{"lodash":"../node_modules/lodash/lodash.js","react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./EffectsText":"components/ui/EffectsText.tsx"}],"assets/methodological-doubt.png":[function(require,module,exports) {
+module.exports = "/methodological-doubt.887f79b6.png";
+},{}],"assets/clear-and-distinct.png":[function(require,module,exports) {
+module.exports = "/clear-and-distinct.530c7699.png";
+},{}],"components/fight/EntityStance.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -70529,7 +70950,13 @@ var _styledComponents = _interopRequireDefault(require("styled-components"));
 
 var _FightContext = require("~/fight/FightContext");
 
-var _HooksText = _interopRequireDefault(require("./HooksText"));
+var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
+
+var _HooksText = _interopRequireDefault(require("~/components/ui/HooksText"));
+
+var _methodologicalDoubt = _interopRequireDefault(require("~/assets/methodological-doubt.png"));
+
+var _clearAndDistinct = _interopRequireDefault(require("~/assets/clear-and-distinct.png"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -70545,70 +70972,42 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var EffectsText = function EffectsText(_a) {
-  var effects = _a.effects,
-      target = _a.target,
-      _b = _a.showHooks,
-      showHooks = _b === void 0 ? false : _b;
+var STANCE_ICONS = new Map([["Methodological Doubt", _methodologicalDoubt.default], ["Clear and Distinct", _clearAndDistinct.default]]);
+
+var EntityStance = function EntityStance(_a) {
+  var target = _a.target;
   var state = (0, _FightContext.useFight)()[0];
-  return _react.default.createElement(EffectsTextWrapper, null, effects.map(function (effect, i) {
-    switch (effect.name) {
-      case "DEAL_DAMAGE":
-        return _react.default.createElement(EffectText, {
-          key: i
-        }, "Deal ", _react.default.createElement(HighlightedText, null, effect.data.damage, " damage"), target ? " to " + (effect.data.target === "enemy" ? state.enemy.enemy.name : "player") : null);
-
-      case "GAIN_CERTAINTY":
-        return _react.default.createElement(EffectText, {
-          key: i
-        }, target ? " " + (effect.data.target === "enemy" ? state.enemy.enemy.name : "Player") + " gains " : "Gain ", _react.default.createElement(HighlightedText, null, effect.data.certainty, " certainty"));
-
-      case "EXHAUST_CARD":
-        return _react.default.createElement(EffectText, {
-          key: i
-        }, _react.default.createElement(HighlightedText, null, "Exhaust"));
-
-      case "ENTER_STANCE":
-        return _react.default.createElement(EffectText, {
-          key: i
-        }, "Enter stance ", _react.default.createElement(HighlightedText, null, effect.data.stance.name), showHooks ? _react.default.createElement(_HooksText.default, {
-          hooks: effect.data.stance.hooks,
-          target: target
-        }) : null);
-
-      case "ADD_POWER":
-        return _react.default.createElement(EffectText, {
-          key: i
-        }, "Gain power ", _react.default.createElement(HighlightedText, null, effect.data.power.name), showHooks ? _react.default.createElement(_HooksText.default, {
-          hooks: effect.data.power.hooks,
-          target: target
-        }) : null);
-
-      case "ADD_CARD":
-        return _react.default.createElement(EffectText, {
-          key: i
-        }, "Add ", _react.default.createElement(HighlightedText, null, effect.data.card().name), " to player's ", effect.data.pile, " ", "draw,discard".includes(effect.data.pile) ? "pile" : null);
-
-      default:
-        return _react.default.createElement(EffectText, {
-          key: i
-        }, _react.default.createElement(HighlightedText, null, effect.name), JSON.stringify(effect.data));
+  var stance = state[target].stance;
+  if (!stance) return null;
+  var id = target + ":" + stance.name;
+  var icon = STANCE_ICONS.get(stance.name) || "";
+  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(_Tooltip.default, {
+    id: id,
+    place: "bottom"
+  }, _react.default.createElement(StanceName, null, stance.name), _react.default.createElement(_HooksText.default, {
+    target: "enemy",
+    hooks: stance.hooks
+  })), _react.default.createElement(StanceIcon, {
+    "data-tip": true,
+    "data-for": id,
+    style: {
+      backgroundImage: "url(" + icon + ")"
     }
   }));
 };
 
-var EffectsTextWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  flex: 1;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  text-align: center;\n"], ["\n  flex: 1;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  text-align: center;\n"])));
+var MetaTitle = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  text-align: center;\n"], ["\n  text-align: center;\n"])));
 
-var EffectText = _styledComponents.default.span(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  text-align: center;\n  margin-bottom: 8px;\n"], ["\n  text-align: center;\n  margin-bottom: 8px;\n"])));
+var StanceName = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
 
-var HighlightedText = _styledComponents.default.span(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  color: ", ";\n  font-weight: bold;\n"], ["\n  color: ", ";\n  font-weight: bold;\n"])), function (props) {
-  return props.modified ? "mediumseagreen" : "navy";
-});
+var StanceIcon = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"], ["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"])));
 
-var _default = EffectsText;
+var _default = EntityStance;
 exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","./HooksText":"components/ui/HooksText.tsx"}],"components/fight/EnemyMechanicLog.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/components/ui/HooksText":"components/ui/HooksText.tsx","~/assets/methodological-doubt.png":"assets/methodological-doubt.png","~/assets/clear-and-distinct.png":"assets/clear-and-distinct.png"}],"assets/cogito.png":[function(require,module,exports) {
+module.exports = "/cogito.f7be2b13.png";
+},{}],"components/fight/EntityPowers.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -70620,9 +71019,231 @@ var _react = _interopRequireDefault(require("react"));
 
 var _styledComponents = _interopRequireDefault(require("styled-components"));
 
-var _reactTooltip = _interopRequireDefault(require("react-tooltip"));
+var _FightContext = require("~/fight/FightContext");
+
+var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
+
+var _HooksText = _interopRequireDefault(require("~/components/ui/HooksText"));
+
+var _cogito = _interopRequireDefault(require("~/assets/cogito.png"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
+  if (Object.defineProperty) {
+    Object.defineProperty(cooked, "raw", {
+      value: raw
+    });
+  } else {
+    cooked.raw = raw;
+  }
+
+  return cooked;
+};
+
+var POWER_ICONS = new Map([["Cogito", _cogito.default]]);
+
+var EntityPowers = function EntityPowers(_a) {
+  var target = _a.target;
+  var state = (0, _FightContext.useFight)()[0];
+  var powers = state[target].powers;
+  return _react.default.createElement(_react.default.Fragment, null, powers.map(function (power, i) {
+    var id = target + ":" + power.name + ":" + i;
+    var icon = POWER_ICONS.get(power.name) || "";
+    return _react.default.createElement(_react.default.Fragment, {
+      key: id
+    }, _react.default.createElement(_Tooltip.default, {
+      id: id,
+      place: "bottom"
+    }, _react.default.createElement(PowerName, null, power.name), _react.default.createElement(_HooksText.default, {
+      target: "enemy",
+      hooks: power.hooks
+    })), _react.default.createElement(PowerIcon, {
+      "data-tip": true,
+      "data-for": id,
+      style: {
+        backgroundImage: "url(" + icon + ")"
+      }
+    }));
+  }));
+};
+
+var MetaTitle = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  text-align: center;\n"], ["\n  text-align: center;\n"])));
+
+var PowerName = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
+
+var PowerIcon = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"], ["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"])));
+
+var _default = EntityPowers;
+exports.default = _default;
+var templateObject_1, templateObject_2, templateObject_3;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/components/ui/HooksText":"components/ui/HooksText.tsx","~/assets/cogito.png":"assets/cogito.png"}],"components/fight/EntityBuffs.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _lodash = require("lodash");
+
+var _react = _interopRequireDefault(require("react"));
+
+var _styledComponents = _interopRequireDefault(require("styled-components"));
 
 var _FightContext = require("~/fight/FightContext");
+
+var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
+
+var _virtue = _interopRequireDefault(require("~/assets/virtue.png"));
+
+var _EntityStance = _interopRequireDefault(require("./EntityStance"));
+
+var _EntityPowers = _interopRequireDefault(require("./EntityPowers"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
+  if (Object.defineProperty) {
+    Object.defineProperty(cooked, "raw", {
+      value: raw
+    });
+  } else {
+    cooked.raw = raw;
+  }
+
+  return cooked;
+};
+
+var ATTRIBUTE_ICONS = new Map([["virtue", _virtue.default]]);
+
+var EntityAttributeBuff = function EntityAttributeBuff(_a) {
+  var target = _a.target,
+      attribute = _a.attribute,
+      value = _a.value;
+  var iconSrc = ATTRIBUTE_ICONS.get(attribute) || "";
+  if (!value) return null;
+  var id = target + ":" + attribute;
+  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(AttributeBuffWrapper, {
+    "data-tip": true,
+    "data-for": id
+  }, _react.default.createElement("img", {
+    src: iconSrc,
+    title: attribute
+  }), _react.default.createElement(AttributeBuffValue, null, value)), _react.default.createElement(_Tooltip.default, {
+    id: id,
+    place: "bottom"
+  }, _react.default.createElement(AttributeName, null, (0, _lodash.capitalize)(attribute))));
+};
+
+var EntityBuffs = function EntityBuffs(_a) {
+  var target = _a.target;
+  var state = (0, _FightContext.useFight)()[0];
+  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(BuffsWrapper, null, _react.default.createElement(_EntityStance.default, {
+    target: target
+  }), _react.default.createElement(_EntityPowers.default, {
+    target: target
+  })), _react.default.createElement(AttributeBuffsWrapper, null, _react.default.createElement(EntityAttributeBuff, {
+    target: target,
+    attribute: "virtue",
+    value: state[target].attributes.virtue
+  })));
+};
+
+var BuffsWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
+
+var AttributeBuffsWrapper = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
+
+var AttributeBuffWrapper = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  position: relative;\n  width: 32px;\n  height: 32px;\n  padding: 5px;\n"], ["\n  position: relative;\n  width: 32px;\n  height: 32px;\n  padding: 5px;\n"])));
+
+var AttributeBuffValue = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  padding: 0 5px;\n  color: black;\n  font-weight: bold;\n  font-size: 0.85em;\n  border-radius: 100px;\n  background: gold;\n"], ["\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  padding: 0 5px;\n  color: black;\n  font-weight: bold;\n  font-size: 0.85em;\n  border-radius: 100px;\n  background: gold;\n"])));
+
+var AttributeName = _styledComponents.default.span(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n  font-weight: bold;\n"], ["\n  font-weight: bold;\n"])));
+
+var _default = EntityBuffs;
+exports.default = _default;
+var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5;
+},{"lodash":"../node_modules/lodash/lodash.js","react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/assets/virtue.png":"assets/virtue.png","./EntityStance":"components/fight/EntityStance.tsx","./EntityPowers":"components/fight/EntityPowers.tsx"}],"components/fight/PlayerStage.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var React = _interopRequireWildcard(require("react"));
+
+var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FightContext = require("~/fight/FightContext");
+
+var _player = _interopRequireDefault(require("~/assets/player.png"));
+
+var _ResourceBars = _interopRequireDefault(require("./ResourceBars"));
+
+var _EntityBuffs = _interopRequireDefault(require("./EntityBuffs"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
+  if (Object.defineProperty) {
+    Object.defineProperty(cooked, "raw", {
+      value: raw
+    });
+  } else {
+    cooked.raw = raw;
+  }
+
+  return cooked;
+};
+
+var PlayerStage = function PlayerStage() {
+  var player = (0, _FightContext.useFight)()[0].player;
+  return React.createElement("div", null, React.createElement("h2", null, "Player"), React.createElement(StageWrapper, null, React.createElement(_ResourceBars.default, {
+    target: "player",
+    hp: {
+      value: player.attributes.hp,
+      total: player.player.baseAttributes.hp
+    },
+    certainty: {
+      value: player.attributes.certainty,
+      total: player.player.baseAttributes.certainty
+    }
+  }), React.createElement("div", null, React.createElement(PlayerFigure, null), React.createElement(_EntityBuffs.default, {
+    target: "player"
+  }))));
+};
+
+var StageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
+
+var PlayerFigure = _styledComponents.default.img.attrs({
+  src: _player.default
+})(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  height: 200px;\n"], ["\n  height: 200px;\n"])));
+
+var _default = PlayerStage;
+exports.default = _default;
+var templateObject_1, templateObject_2;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/assets/player.png":"assets/player.png","./ResourceBars":"components/fight/ResourceBars.tsx","./EntityBuffs":"components/fight/EntityBuffs.tsx"}],"assets/descartes.png":[function(require,module,exports) {
+module.exports = "/descartes.8bcf3031.png";
+},{}],"components/fight/EnemyMechanicLog.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _react = _interopRequireDefault(require("react"));
+
+var _styledComponents = _interopRequireDefault(require("styled-components"));
+
+var _FightContext = require("~/fight/FightContext");
+
+var _Tooltip = _interopRequireDefault(require("~/components/ui/Tooltip"));
 
 var _EffectsText = _interopRequireDefault(require("~/components/ui/EffectsText"));
 
@@ -70676,13 +71297,9 @@ var EnemyMechanicLog = function EnemyMechanicLog() {
     var id = turn + ":" + mechanic.name + ":" + i;
     return _react.default.createElement(_react.default.Fragment, {
       key: id
-    }, _react.default.createElement(_reactTooltip.default, {
+    }, _react.default.createElement(_Tooltip.default, {
       id: id,
-      effect: "solid",
-      place: "left",
-      backgroundColor: "white",
-      textColor: "#333333",
-      multiline: true
+      place: "left"
     }, _react.default.createElement(MechanicName, null, mechanic.name), _react.default.createElement(_EffectsText.default, {
       effects: mechanic.effects,
       target: "enemy",
@@ -70707,204 +71324,7 @@ var GameLogItemHeader = _styledComponents.default.div(templateObject_5 || (templ
 var _default = EnemyMechanicLog;
 exports.default = _default;
 var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","react-tooltip":"../node_modules/react-tooltip/dist/index.es.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/EffectsText":"components/ui/EffectsText.tsx"}],"assets/methodological-doubt.png":[function(require,module,exports) {
-module.exports = "/methodological-doubt.887f79b6.png";
-},{}],"assets/clear-and-distinct.png":[function(require,module,exports) {
-module.exports = "/clear-and-distinct.530c7699.png";
-},{}],"components/fight/EntityStance.tsx":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _react = _interopRequireDefault(require("react"));
-
-var _reactTooltip = _interopRequireDefault(require("react-tooltip"));
-
-var _styledComponents = _interopRequireDefault(require("styled-components"));
-
-var _FightContext = require("~/fight/FightContext");
-
-var _HooksText = _interopRequireDefault(require("~/components/ui/HooksText"));
-
-var _methodologicalDoubt = _interopRequireDefault(require("~/assets/methodological-doubt.png"));
-
-var _clearAndDistinct = _interopRequireDefault(require("~/assets/clear-and-distinct.png"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
-  if (Object.defineProperty) {
-    Object.defineProperty(cooked, "raw", {
-      value: raw
-    });
-  } else {
-    cooked.raw = raw;
-  }
-
-  return cooked;
-};
-
-var STANCE_ICONS = new Map([["Methodological Doubt", _methodologicalDoubt.default], ["Clear and Distinct", _clearAndDistinct.default]]);
-
-var EntityStance = function EntityStance(_a) {
-  var target = _a.target;
-  var state = (0, _FightContext.useFight)()[0];
-  var stance = state[target].stance;
-  if (!stance) return null;
-  var id = target + ":" + stance.name;
-  var icon = STANCE_ICONS.get(stance.name) || "";
-  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(_reactTooltip.default, {
-    id: id,
-    effect: "solid",
-    place: "bottom",
-    backgroundColor: "white",
-    textColor: "#333333",
-    multiline: true
-  }, _react.default.createElement(StanceName, null, stance.name), _react.default.createElement(_HooksText.default, {
-    target: "enemy",
-    hooks: stance.hooks
-  })), _react.default.createElement(StanceIcon, {
-    "data-tip": true,
-    "data-for": id,
-    style: {
-      backgroundImage: "url(" + icon + ")"
-    }
-  }));
-};
-
-var MetaTitle = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  text-align: center;\n"], ["\n  text-align: center;\n"])));
-
-var StanceName = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
-
-var StanceIcon = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"], ["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"])));
-
-var _default = EntityStance;
-exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","react-tooltip":"../node_modules/react-tooltip/dist/index.es.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/HooksText":"components/ui/HooksText.tsx","~/assets/methodological-doubt.png":"assets/methodological-doubt.png","~/assets/clear-and-distinct.png":"assets/clear-and-distinct.png"}],"assets/cogito.png":[function(require,module,exports) {
-module.exports = "/cogito.f7be2b13.png";
-},{}],"components/fight/EntityPowers.tsx":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _react = _interopRequireDefault(require("react"));
-
-var _reactTooltip = _interopRequireDefault(require("react-tooltip"));
-
-var _styledComponents = _interopRequireDefault(require("styled-components"));
-
-var _FightContext = require("~/fight/FightContext");
-
-var _cogito = _interopRequireDefault(require("~/assets/cogito.png"));
-
-var _HooksText = _interopRequireDefault(require("../ui/HooksText"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
-  if (Object.defineProperty) {
-    Object.defineProperty(cooked, "raw", {
-      value: raw
-    });
-  } else {
-    cooked.raw = raw;
-  }
-
-  return cooked;
-};
-
-var POWER_ICONS = new Map([["Cogito", _cogito.default]]);
-
-var EntityPowers = function EntityPowers(_a) {
-  var target = _a.target;
-  var state = (0, _FightContext.useFight)()[0];
-  var powers = state[target].powers;
-  return _react.default.createElement(_react.default.Fragment, null, powers.map(function (power, i) {
-    var id = target + ":" + power.name + ":" + i;
-    var icon = POWER_ICONS.get(power.name) || "";
-    return _react.default.createElement(_react.default.Fragment, {
-      key: id
-    }, _react.default.createElement(_reactTooltip.default, {
-      id: id,
-      effect: "solid",
-      place: "bottom",
-      backgroundColor: "white",
-      textColor: "#333333",
-      multiline: true
-    }, _react.default.createElement(PowerName, null, power.name), _react.default.createElement(_HooksText.default, {
-      target: "enemy",
-      hooks: power.hooks
-    })), _react.default.createElement(PowerIcon, {
-      "data-tip": true,
-      "data-for": id,
-      style: {
-        backgroundImage: "url(" + icon + ")"
-      }
-    }));
-  }));
-};
-
-var MetaTitle = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  text-align: center;\n"], ["\n  text-align: center;\n"])));
-
-var PowerName = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
-
-var PowerIcon = _styledComponents.default.div(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"], ["\n  display: inline-block;\n  width: 32px;\n  height: 32px;\n  margin: 5px;\n  border-radius: 100%;\n  background-size: cover;\n  background-position: center;\n"])));
-
-var _default = EntityPowers;
-exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3;
-},{"react":"../node_modules/react/index.js","react-tooltip":"../node_modules/react-tooltip/dist/index.es.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/assets/cogito.png":"assets/cogito.png","../ui/HooksText":"components/ui/HooksText.tsx"}],"components/fight/EntityBuffs.tsx":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _react = _interopRequireDefault(require("react"));
-
-var _styledComponents = _interopRequireDefault(require("styled-components"));
-
-var _EntityStance = _interopRequireDefault(require("./EntityStance"));
-
-var _EntityPowers = _interopRequireDefault(require("./EntityPowers"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (cooked, raw) {
-  if (Object.defineProperty) {
-    Object.defineProperty(cooked, "raw", {
-      value: raw
-    });
-  } else {
-    cooked.raw = raw;
-  }
-
-  return cooked;
-};
-
-var EntityBuffs = function EntityBuffs(_a) {
-  var target = _a.target;
-  return _react.default.createElement(BuffsWrapper, null, _react.default.createElement(_EntityStance.default, {
-    target: target
-  }), _react.default.createElement(_EntityPowers.default, {
-    target: target
-  }));
-};
-
-var BuffsWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n"], ["\n  display: flex;\n"])));
-
-var _default = EntityBuffs;
-exports.default = _default;
-var templateObject_1;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","./EntityStance":"components/fight/EntityStance.tsx","./EntityPowers":"components/fight/EntityPowers.tsx"}],"components/fight/EnemyStage.tsx":[function(require,module,exports) {
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/Tooltip":"components/ui/Tooltip.tsx","~/components/ui/EffectsText":"components/ui/EffectsText.tsx"}],"components/fight/EnemyStage.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -71013,9 +71433,13 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
 };
 
 var HandStage = function HandStage() {
-  var _a = (0, _FightContext.useFight)(),
-      player = _a[0].player,
-      model = _a[1];
+  var _a = React.useState(false),
+      showModifiers = _a[0],
+      setShowModifiers = _a[1];
+
+  var _b = (0, _FightContext.useFight)(),
+      player = _b[0].player,
+      model = _b[1];
 
   var hand = player.cards.hand;
 
@@ -71024,6 +71448,12 @@ var HandStage = function HandStage() {
       card: card
     });
     model.run();
+  };
+
+  var toggleShowModifiers = function toggleShowModifiers(value) {
+    return function () {
+      return setShowModifiers(value);
+    };
   };
 
   return React.createElement(HandStageWrapper, null, hand.map(function (card, i) {
@@ -71067,7 +71497,8 @@ var HandStage = function HandStage() {
         return null;
       }
     }, React.createElement(_EffectsText.default, {
-      effects: card.effects
+      effects: card.effects,
+      showModifiers: true
     })));
   }));
 };
@@ -71231,13 +71662,15 @@ var _framerMotion = require("framer-motion");
 
 var _ModelProvider = require("~/logic/ModelProvider");
 
-var _FightModel = require("~/fight/FightModel");
+var _initFight = require("~/fight/initFight");
 
 var _FightContext = _interopRequireDefault(require("~/fight/FightContext"));
 
 var _default2 = require("~/game/player/default");
 
 var _descartes = require("~/game/ai/descartes");
+
+var _decks = require("~/game/cards/decks");
 
 var _FightStageHeader = _interopRequireDefault(require("./FightStageHeader"));
 
@@ -71271,19 +71704,41 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var fight = (0, _FightModel.initFight)((0, _default2.defaultPlayer)(), (0, _descartes.createDescartes)());
+var fight = (0, _initFight.initFight)((0, _default2.defaultPlayer)(), (0, _descartes.createDescartes)());
 
 var FightStage = function FightStage() {
-  var _a = (0, _ModelProvider.useModel)(fight),
-      state = _a[0],
-      model = _a[1];
+  var _a = React.useState(false),
+      deckSelected = _a[0],
+      setDeckSelected = _a[1];
 
-  React.useEffect(function () {
+  var _b = (0, _ModelProvider.useModel)(fight),
+      state = _b[0],
+      model = _b[1];
+
+  var startFight = function startFight(deck) {
+    model.dispatch("LOAD_DECK", {
+      deck: deck
+    });
     model.affect("START_FIGHT", {});
     model.run();
-  }, []);
+    setDeckSelected(true);
+  };
+
   var victory = state.enemy.attributes.hp <= 0;
   var defeat = state.player.attributes.hp <= 0;
+
+  if (!deckSelected) {
+    return React.createElement(FightStageWrapper, null, React.createElement(DeckSelectWrapper, null, React.createElement("h1", null, "Fight!"), React.createElement(DeckSelectButton, {
+      onClick: function onClick() {
+        return startFight((0, _decks.startingDeck)());
+      }
+    }, "Starting Deck"), React.createElement(DeckSelectButton, {
+      onClick: function onClick() {
+        return startFight((0, _decks.virtueDeck)());
+      }
+    }, "Virtue Deck")));
+  }
+
   return React.createElement(_FightContext.default.Provider, {
     value: [state, model]
   }, React.createElement(_framerMotion.AnimateSharedLayout, null, React.createElement(FightStageWrapper, null, React.createElement(FightStageHeaderWrapper, null, React.createElement(_FightStageHeader.default, null)), React.createElement(FightStageContentWrapper, null, React.createElement(_PlayerStage.default, null), React.createElement(_EnemyStage.default, null)), React.createElement(_HandStage.default, null), React.createElement(FightStageFooterWrapper, null, React.createElement(_FightStageFooter.default, null)), React.createElement(_VictoryModal.default, {
@@ -71301,10 +71756,14 @@ var FightStageContentWrapper = _styledComponents.default.div(templateObject_3 ||
 
 var FightStageFooterWrapper = _styledComponents.default.div(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n  flex: 0;\n  z-index: 1;\n"], ["\n  flex: 0;\n  z-index: 1;\n"])));
 
+var DeckSelectWrapper = _styledComponents.default.div(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n  position: fixed;\n  top: 50%;\n  left: 50%;\n  transform: translateX(-50%) translateY(-50%);\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n"], ["\n  position: fixed;\n  top: 50%;\n  left: 50%;\n  transform: translateX(-50%) translateY(-50%);\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n"])));
+
+var DeckSelectButton = _styledComponents.default.button(templateObject_6 || (templateObject_6 = __makeTemplateObject(["\n  border: none;\n  padding: 10px 20px;\n  background: white;\n  border-radius: 4px;\n  margin: 10px;\n"], ["\n  border: none;\n  padding: 10px 20px;\n  background: white;\n  border-radius: 4px;\n  margin: 10px;\n"])));
+
 var _default = FightStage;
 exports.default = _default;
-var templateObject_1, templateObject_2, templateObject_3, templateObject_4;
-},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","~/logic/ModelProvider":"logic/ModelProvider.tsx","~/fight/FightModel":"fight/FightModel.ts","~/fight/FightContext":"fight/FightContext.tsx","~/game/player/default":"game/player/default.ts","~/game/ai/descartes":"game/ai/descartes/index.ts","./FightStageHeader":"components/fight/FightStageHeader.tsx","./FightStageFooter":"components/fight/FightStageFooter.tsx","./PlayerStage":"components/fight/PlayerStage.tsx","./EnemyStage":"components/fight/EnemyStage.tsx","./HandStage":"components/fight/HandStage.tsx","./VictoryModal":"components/fight/VictoryModal.tsx","./DefeatModal":"components/fight/DefeatModal.tsx"}],"components/App.tsx":[function(require,module,exports) {
+var templateObject_1, templateObject_2, templateObject_3, templateObject_4, templateObject_5, templateObject_6;
+},{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","~/logic/ModelProvider":"logic/ModelProvider.tsx","~/fight/initFight":"fight/initFight.ts","~/fight/FightContext":"fight/FightContext.tsx","~/game/player/default":"game/player/default.ts","~/game/ai/descartes":"game/ai/descartes/index.ts","~/game/cards/decks":"game/cards/decks.ts","./FightStageHeader":"components/fight/FightStageHeader.tsx","./FightStageFooter":"components/fight/FightStageFooter.tsx","./PlayerStage":"components/fight/PlayerStage.tsx","./EnemyStage":"components/fight/EnemyStage.tsx","./HandStage":"components/fight/HandStage.tsx","./VictoryModal":"components/fight/VictoryModal.tsx","./DefeatModal":"components/fight/DefeatModal.tsx"}],"components/App.tsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -71427,7 +71886,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60403" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "52064" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
