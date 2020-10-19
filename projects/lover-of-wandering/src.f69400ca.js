@@ -70618,10 +70618,10 @@ var ResourceBars = function ResourceBars(_a) {
     total: hp.total,
     color: "crimson",
     deltas: hpDeltas
-  })), React.createElement(_Tooltip.default, {
+  })), target === "player" ? React.createElement(_Tooltip.default, {
     id: hpId,
     place: "bottom"
-  }, React.createElement(ResourceTitle, null, "Resolve"), React.createElement("p", null, "Win by breaking the opponent's resolve!"), React.createElement("p", null, "You die if your resolve reaches zero.")), React.createElement("div", {
+  }, React.createElement(ResourceTitle, null, "Resolve"), React.createElement("p", null, "Win by breaking the opponent's resolve!"), React.createElement("p", null, "You die if your resolve reaches zero.")) : null, React.createElement("div", {
     "data-tip": true,
     "data-for": certaintyId
   }, React.createElement(_HorizontalBar.default, {
@@ -70630,15 +70630,15 @@ var ResourceBars = function ResourceBars(_a) {
     total: 100,
     color: "dodgerblue",
     deltas: certaintyDeltas
-  })), React.createElement(_Tooltip.default, {
+  })), target === "player" ? React.createElement(_Tooltip.default, {
     id: certaintyId,
     place: "bottom"
-  }, React.createElement(ResourceTitle, null, "Certainty"), React.createElement("p", null, "Certainty protects you from the opponent's attacks."), React.createElement("p", null, "Certainty is cleared at the beginning of every turn.")));
+  }, React.createElement(ResourceTitle, null, "Certainty"), React.createElement("p", null, "Certainty protects you from the opponent's attacks."), React.createElement("p", null, "Certainty is cleared at the beginning of every turn.")) : null);
 };
 
 var ResourceBarsWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  flex-direction: column;\n"], ["\n  display: flex;\n  flex-direction: column;\n"])));
 
-var ResourceTitle = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  margin-bottom: 5px;\n"], ["\n  font-weight: bold;\n  margin-bottom: 5px;\n"])));
+var ResourceTitle = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n  margin-bottom: 5px;\n"], ["\n  font-weight: bold;\n  text-align: center;\n  margin-bottom: 5px;\n"])));
 
 var _default = ResourceBars;
 exports.default = _default;
@@ -71204,21 +71204,27 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
   return cooked;
 };
 
-var ATTRIBUTE_ICONS = new Map([["virtue", _virtue.default]]);
+var ATTRIBUTE_ICONS = new Map([["virtue", {
+  icon: _virtue.default,
+  description: _react.default.createElement("p", null, "Virtue increases the damage of your attacks")
+}]]);
 
 var EntityAttributeBuff = function EntityAttributeBuff(_a) {
   var target = _a.target,
       attribute = _a.attribute,
       value = _a.value;
-  var iconSrc = ATTRIBUTE_ICONS.get(attribute) || "";
+  var iconData = ATTRIBUTE_ICONS.get(attribute) || {
+    icon: "",
+    description: ""
+  };
   if (!value) return null;
   var id = target + ":" + attribute;
   return _react.default.createElement(_BuffIcon.default, {
     id: id,
-    icon: iconSrc,
+    icon: iconData.icon,
     variant: "img",
     value: value,
-    tooltipContent: _react.default.createElement(AttributeName, null, (0, _lodash.capitalize)(attribute))
+    tooltipContent: _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(AttributeName, null, (0, _lodash.capitalize)(attribute)), iconData.description)
   });
 };
 
@@ -71242,7 +71248,7 @@ var BuffsWrapper = _styledComponents.default.div(templateObject_1 || (templateOb
   return props.target === "player" ? "flex-start" : "flex-end";
 });
 
-var AttributeName = _styledComponents.default.span(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n"], ["\n  font-weight: bold;\n"])));
+var AttributeName = _styledComponents.default.div(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  font-weight: bold;\n  text-align: center;\n"], ["\n  font-weight: bold;\n  text-align: center;\n"])));
 
 var _default = EntityBuffs;
 exports.default = _default;
@@ -71573,6 +71579,11 @@ var HandStage = function HandStage() {
         if (pathInfo.offset.y <= -200 && isPlayable && player.canPlay) {
           playCard(card);
         }
+      },
+      transition: {
+        type: "spring",
+        stiffness: 350,
+        damping: 50
       }
     }, React.createElement(_PaperCard.default, {
       card: card,
@@ -71905,7 +71916,7 @@ var __extends = void 0 && (void 0).__extends || function () {
   };
 }();
 
-var GlobalStyles = (0, _styledComponents.createGlobalStyle)(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  /**\n   * Add CSS reset, and start using a theme...\n   */\n  p {\n    margin: 5px 0;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"], ["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  /**\n   * Add CSS reset, and start using a theme...\n   */\n  p {\n    margin: 5px 0;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"])));
+var GlobalStyles = (0, _styledComponents.createGlobalStyle)(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  /**\n   * Add CSS reset, and start using a theme...\n   */\n  p {\n    margin: 10px 0;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"], ["\n  body {\n    font-family: Philosopher, serif;\n    font-size: 16px;\n    background: url(\"https://www.great-british-watch.co.uk/wp-content/uploads/2013/01/British_House_of_Commons_1834.jpg\");\n    background-size: cover;\n    background-repeat: no-repeat;\n    background-position: center;\n    color: white;\n    margin: 0;\n    padding: 0;\n    overflow: hidden;\n  }\n\n  /**\n   * Add CSS reset, and start using a theme...\n   */\n  p {\n    margin: 10px 0;\n  }\n\n  #app {\n    background: rgba(0, 0, 0, 0.666);\n  }\n"])));
 
 var App =
 /** @class */
@@ -71970,7 +71981,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64189" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50365" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
