@@ -67032,19 +67032,19 @@ var PaperCard = function PaperCard(_a) {
     },
     onMouseEnter: onMouseOver,
     onMouseLeave: onMouseOut
-  }, React.createElement(CardCost, null, card.cost), React.createElement(CardTitle, null, card.name), React.createElement(CardType, {
+  }, inTransition ? null : React.createElement(React.Fragment, null, React.createElement(CardCost, null, card.cost), React.createElement(CardTitle, null, card.name), React.createElement(CardType, {
     type: card.type
-  }, card.type), children);
+  }, card.type)), children);
 };
 
 var cardCover = function cardCover(color) {
   return (0, _styledComponents.css)(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  &:after {\n    position: absolute;\n    content: \"\";\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    background: ", ";\n  }\n"], ["\n  &:after {\n    position: absolute;\n    content: \"\";\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    background: ", ";\n  }\n"])), color);
 };
 
-var fadeIn = (0, _styledComponents.keyframes)(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  from {\n    opacity: 0;\n  }\n\n  to {\n    opacity: 1;\n  }\n"], ["\n  from {\n    opacity: 0;\n  }\n\n  to {\n    opacity: 1;\n  }\n"])));
-var fadeOut = (0, _styledComponents.keyframes)(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  from {\n    opacity: 1;\n  }\n\n  to {\n    opacity: 0;\n  }\n"], ["\n  from {\n    opacity: 1;\n  }\n\n  to {\n    opacity: 0;\n  }\n"])));
+var fadeIn = (0, _styledComponents.keyframes)(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  0% {\n    opacity: 0.5;\n    background: gold;\n  }\n\n  to {\n    background: white;\n    opacity: 1;\n  }\n"], ["\n  0% {\n    opacity: 0.5;\n    background: gold;\n  }\n\n  to {\n    background: white;\n    opacity: 1;\n  }\n"])));
+var fadeOut = (0, _styledComponents.keyframes)(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  from {\n    background: white;\n  }\n\n  to {\n    background: gold;\n  }\n"], ["\n  from {\n    background: white;\n  }\n\n  to {\n    background: gold;\n  }\n"])));
 
-var CardWrapper = _styledComponents.default.div(templateObject_6 || (templateObject_6 = __makeTemplateObject(["\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  width: 175px;\n  height: 255px;\n  padding: 16px;\n  border: 1px solid #ccc;\n  border-radius: 8px;\n  overflow: hidden;\n  color: black;\n  box-shadow: 0 2px 8px -4px rgba(0, 0, 0, 0.66);\n  transition: box-shadow 150ms ease-out;\n\n  &:hover {\n    cursor: grab;\n    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);\n  }\n\n  &:active {\n    cursor: grabbing;\n  }\n\n  ", "\n\n  ", "\n"], ["\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  width: 175px;\n  height: 255px;\n  padding: 16px;\n  border: 1px solid #ccc;\n  border-radius: 8px;\n  overflow: hidden;\n  color: black;\n  box-shadow: 0 2px 8px -4px rgba(0, 0, 0, 0.66);\n  transition: box-shadow 150ms ease-out;\n\n  &:hover {\n    cursor: grab;\n    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);\n  }\n\n  &:active {\n    cursor: grabbing;\n  }\n\n  ", "\n\n  ", "\n"])), function (props) {
+var CardWrapper = _styledComponents.default.div(templateObject_6 || (templateObject_6 = __makeTemplateObject(["\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  width: 175px;\n  height: 255px;\n  padding: 16px;\n  border: 1px solid #ccc;\n  border-radius: 8px;\n  overflow: hidden;\n  color: black;\n  background: white;\n  box-shadow: 0 2px 8px -4px rgba(0, 0, 0, 0.66);\n  transition: box-shadow 150ms ease-out;\n\n  &:hover {\n    cursor: grab;\n    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);\n  }\n\n  &:active {\n    cursor: grabbing;\n  }\n\n  ", "\n\n  ", "\n"], ["\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  width: 175px;\n  height: 255px;\n  padding: 16px;\n  border: 1px solid #ccc;\n  border-radius: 8px;\n  overflow: hidden;\n  color: black;\n  background: white;\n  box-shadow: 0 2px 8px -4px rgba(0, 0, 0, 0.66);\n  transition: box-shadow 150ms ease-out;\n\n  &:hover {\n    cursor: grab;\n    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);\n  }\n\n  &:active {\n    cursor: grabbing;\n  }\n\n  ", "\n\n  ", "\n"])), function (props) {
   return props.intransition ? (0, _styledComponents.css)(templateObject_4 || (templateObject_4 = __makeTemplateObject(["\n          animation: ", " 1000ms ease-out forwards;\n          animation-iteration-count: 1;\n        "], ["\n          animation: ", " 1000ms ease-out forwards;\n          animation-iteration-count: 1;\n        "])), fadeOut) : (0, _styledComponents.css)(templateObject_5 || (templateObject_5 = __makeTemplateObject(["\n          animation: ", " 500ms ease-out forwards;\n          animation-iteration-count: 1;\n        "], ["\n          animation: ", " 500ms ease-out forwards;\n          animation-iteration-count: 1;\n        "])), fadeIn);
 }, function (props) {
   return props.disabled ? cardCover("rgba(255, 255, 255, 0.66)") : "";
@@ -67191,20 +67191,25 @@ var CardPile = function CardPile(_a) {
       layoutId: "" + card.id,
       animate: {
         scale: 0.1,
-        rotate: (name === "draw" ? -1 : 1) * 270,
-        y: 0,
-        // TODO: Setup themes
-        backgroundColor: "#ffd700"
+        y: 0
       },
       transition: {
         duration: 1
       },
       initial: false
+    }, _react.default.createElement(_framerMotion.motion.div, {
+      animate: {
+        rotate: (name === "draw" ? -1 : 1) * 270,
+        backgroundColor: "#ffffff"
+      },
+      transition: {
+        duration: 1
+      }
     }, _react.default.createElement(_PaperCard.default, {
       card: card,
       onClick: _lodash.noop,
       inTransition: true
-    }));
+    })));
   })));
 };
 
@@ -71523,7 +71528,7 @@ var __makeTemplateObject = void 0 && (void 0).__makeTemplateObject || function (
 };
 
 var HandStage = function HandStage() {
-  var _a = React.useState(false),
+  var _a = React.useState(null),
       showModifiers = _a[0],
       setShowModifiers = _a[1];
 
@@ -71550,7 +71555,7 @@ var HandStage = function HandStage() {
     // TODO: Figure out why I need `0.5` (I just added it, and it maginally works).
     var normalizedIndex = i - hand.length + hand.length / 2 + 0.5;
     var isPlayable = player.energy >= card.cost;
-    return React.createElement(AnimatedCardWrapper, {
+    return React.createElement(AnimatedCardLayoutWrapper, {
       key: card.id,
       layoutId: "" + card.id,
       drag: true,
@@ -71561,18 +71566,13 @@ var HandStage = function HandStage() {
         bottom: 0
       },
       dragElastic: 1,
-      initial: {
-        backgroundColor: "#FFFFFF"
-      },
       animate: {
         scale: 1,
-        rotate: normalizedIndex * 10,
-        y: Math.abs(normalizedIndex) * (Math.abs(normalizedIndex) * 20),
-        backgroundColor: "#FFFFFF"
+        y: Math.abs(normalizedIndex) * (Math.abs(normalizedIndex) * 20)
       },
       whileHover: {
         scale: 1.15,
-        rotate: 0
+        y: Math.abs(normalizedIndex) * (Math.abs(normalizedIndex) * 10)
       },
       onDragEnd: function onDragEnd(_event, pathInfo) {
         // TODO: Make this zone detection better
@@ -71585,25 +71585,45 @@ var HandStage = function HandStage() {
         stiffness: 350,
         damping: 50
       }
+    }, React.createElement(AnimatedCardWrapper, {
+      initial: {
+        rotate: -270
+      },
+      animate: {
+        scale: 1,
+        backgroundColor: "#ffffff",
+        rotate: normalizedIndex * 10
+      },
+      whileHover: {
+        rotate: 0
+      },
+      transition: {
+        type: "spring",
+        stiffness: 200,
+        damping: 20
+      }
     }, React.createElement(_PaperCard.default, {
       card: card,
       disabled: !isPlayable,
       onClick: function onClick() {
         return null;
-      }
+      },
+      onMouseOver: toggleShowModifiers(card.id),
+      onMouseOut: toggleShowModifiers(null)
     }, React.createElement(_EffectsText.default, {
       effects: card.effects,
-      showModifiers: true
-    })));
+      showModifiers: showModifiers === card.id
+    }))));
   }));
 };
 
 var HandStageWrapper = _styledComponents.default.div(templateObject_1 || (templateObject_1 = __makeTemplateObject(["\n  display: flex;\n  justify-content: center;\n  flex: 0;\n  position: absolute;\n  bottom: 100px;\n  left: 50%;\n  transform: translateX(-50%);\n"], ["\n  display: flex;\n  justify-content: center;\n  flex: 0;\n  position: absolute;\n  bottom: 100px;\n  left: 50%;\n  transform: translateX(-50%);\n"])));
 
-var AnimatedCardWrapper = (0, _styledComponents.default)(_framerMotion.motion.div)(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  margin-right: -20px;\n  border-radius: 8px;\n  z-index: 0;\n\n  &:hover {\n    z-index: 1;\n  }\n"], ["\n  margin-right: -20px;\n  border-radius: 8px;\n  z-index: 0;\n\n  &:hover {\n    z-index: 1;\n  }\n"])));
+var AnimatedCardLayoutWrapper = (0, _styledComponents.default)(_framerMotion.motion.div)(templateObject_2 || (templateObject_2 = __makeTemplateObject(["\n  margin-right: -20px;\n  border-radius: 8px;\n  z-index: 0;\n\n  &:hover {\n    z-index: 1;\n  }\n"], ["\n  margin-right: -20px;\n  border-radius: 8px;\n  z-index: 0;\n\n  &:hover {\n    z-index: 1;\n  }\n"])));
+var AnimatedCardWrapper = (0, _styledComponents.default)(_framerMotion.motion.div)(templateObject_3 || (templateObject_3 = __makeTemplateObject(["\n  border-radius: 8px;\n  overflow: hidden;\n"], ["\n  border-radius: 8px;\n  overflow: hidden;\n"])));
 var _default = HandStage;
 exports.default = _default;
-var templateObject_1, templateObject_2;
+var templateObject_1, templateObject_2, templateObject_3;
 },{"react":"../node_modules/react/index.js","styled-components":"../node_modules/styled-components/dist/styled-components.browser.esm.js","framer-motion":"../node_modules/framer-motion/dist/framer-motion.es.js","~/fight/FightContext":"fight/FightContext.tsx","~/components/ui/PaperCard":"components/ui/PaperCard.tsx","~/components/ui/EffectsText":"components/ui/EffectsText.tsx"}],"components/ui/Modal.tsx":[function(require,module,exports) {
 "use strict";
 
@@ -71981,7 +72001,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50365" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50456" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
